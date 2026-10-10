@@ -1,6 +1,6 @@
 # ==============================================================================
 # START YUYAN AUTO-SYNC WATCHER
-# Launches yuyan-autosync.ps1 in the background with hidden window and logging
+# Launches yuyan-autosync.ps1 as a detached background daemon
 # ==============================================================================
 
 param(
@@ -25,14 +25,15 @@ if (Test-Path $PidFile) {
 
 Write-Host "Starting YUYAN Auto-Sync background watcher..." -ForegroundColor Cyan
 
-$process = Start-Process powershell.exe -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$ScriptFile`"", "-RepoPath", "`"$RepoPath`"" -WindowStyle Hidden -PassThru
+$cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$ScriptFile`" -RepoPath `"$RepoPath`""
+$result = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = $cmd }
 
-Start-Sleep -Seconds 1
+Start-Sleep -Seconds 2
 
 if (Test-Path $PidFile) {
     $runningPid = Get-Content $PidFile -ErrorAction SilentlyContinue
     Write-Host "YUYAN Auto-Sync successfully started in background (PID: $runningPid)!" -ForegroundColor Green
     Write-Host "Log file: $ToolsDir\autosync.log"
 } else {
-    Write-Host "Watcher started with Process ID: $($process.Id)." -ForegroundColor Green
+    Write-Host "Watcher started with Process ID: $($result.ProcessId)." -ForegroundColor Green
 }
