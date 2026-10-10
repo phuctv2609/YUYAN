@@ -57,6 +57,18 @@ function parseUrl(pathname: string): RouteState {
     return { tab: 'dictionary', level: 1, lessonNumber: 1, isNotFound: false };
   }
 
+  // Support /profile, /account, /profile/settings, /ho-so aliases
+  if (
+    path === '/profile' ||
+    path === '/account' ||
+    path === '/ho-so' ||
+    path === '/profile/settings' ||
+    path === '/profile/edit' ||
+    path === '/settings/profile'
+  ) {
+    return { tab: 'profile', level: 1, lessonNumber: 1, isNotFound: false };
+  }
+
   // Support /lesson/hskX-baiYY or /lesson/hskX-lessonYY
   const matchLessonSlug = path.match(/^\/lesson\/hsk([1-6])-(?:bai|lesson)(\d+)$/i);
   if (matchLessonSlug) {
@@ -113,6 +125,8 @@ function parseUrl(pathname: string): RouteState {
     'progress',
     'community',
     'settings',
+    'profile',
+    'account',
   ];
   const tabName = path.replace(/^\//, '');
   if (validTabs.includes(tabName)) {
@@ -170,6 +184,8 @@ const AppContent: React.FC = () => {
           url = '/';
         } else if (next.tab === 'lesson') {
           url = `/hsk/${next.level}/lesson/${next.lessonNumber}`;
+        } else if (next.tab === 'profile' || next.tab === 'account') {
+          url = '/profile';
         } else {
           url = `/${next.tab}`;
         }
@@ -366,7 +382,7 @@ const AppContent: React.FC = () => {
           <div className="w-full pb-24 md:pb-12">
             <ProgressView />
           </div>
-        ) : route.tab === 'settings' ? (
+        ) : route.tab === 'settings' || route.tab === 'profile' || route.tab === 'account' ? (
           <div className="w-full pb-24 md:pb-12">
             <SettingsView />
           </div>

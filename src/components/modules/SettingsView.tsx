@@ -1,16 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Sun, Moon, Laptop, RotateCcw, User, Edit3, Save, X, CheckCircle2, Target, Clock, Flame } from 'lucide-react';
+import { Settings, Sun, Moon, Laptop, RotateCcw, User, Edit3, Save, X, CheckCircle2, Target, Clock, Flame, Loader2 } from 'lucide-react';
 import { useTheme, Theme } from '../../context/ThemeContext.tsx';
 import { useToast } from '../ui/Toast.tsx';
-import { learnerRepository, StudentProfile, validateStudentProfile } from '../../data/repositories/learnerRepository.ts';
+import { learnerRepository, StudentProfile, validateStudentProfile, PRESET_AVATARS } from '../../data/repositories/learnerRepository.ts';
 import { LearnerAvatar } from '../ui/LearnerAvatar.tsx';
-
-const PRESET_AVATARS = [
-  { id: 'none', label: 'Viết tắt (Tên)', url: '' },
-  { id: 'avatar_panda', label: 'Gấu Trúc', url: 'https://images.unsplash.com/photo-1564349683136-77e08dba1ef7?w=128&auto=format&fit=crop&q=80' },
-  { id: 'avatar_scholar', label: 'Học Giả', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&auto=format&fit=crop&q=80' },
-  { id: 'avatar_student', label: 'Du Học Sinh', url: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=128&auto=format&fit=crop&q=80' },
-];
 
 export const SettingsView: React.FC = () => {
   const { theme, resolvedTheme, setTheme } = useTheme();
@@ -26,6 +19,7 @@ export const SettingsView: React.FC = () => {
     avatar: profile.avatar || '',
   });
   const [validationErrors, setValidationErrors] = useState<{ displayName?: string; schoolEmail?: string; dailyGoalMinutes?: string }>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const unsub = learnerRepository.subscribe((p) => {
@@ -64,8 +58,10 @@ export const SettingsView: React.FC = () => {
     setIsEditingProfile(false);
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
+
     const result = validateStudentProfile({
       displayName: editForm.displayName,
       schoolEmail: editForm.schoolEmail,
@@ -78,18 +74,33 @@ export const SettingsView: React.FC = () => {
       return;
     }
 
-    learnerRepository.updateProfile({
-      displayName: editForm.displayName.trim(),
-      name: editForm.displayName.trim(),
-      schoolEmail: editForm.schoolEmail.trim(),
-      targetHskLevel: editForm.targetHskLevel,
-      dailyGoalMinutes: editForm.dailyGoalMinutes,
-      avatar: editForm.avatar.trim() || undefined,
-    });
+    setIsSaving(true);
+    try {
+      const res = await learnerRepository.updateProfileAsync({
+        displayName: editForm.displayName.trim(),
+        name: editForm.displayName.trim(),
+        schoolEmail: editForm.schoolEmail.trim(),
+        targetHskLevel: editForm.targetHskLevel,
+        dailyGoalMinutes: editForm.dailyGoalMinutes,
+        avatar: editForm.avatar.trim() || undefined,
+      });
 
-    setIsEditingProfile(false);
-    setValidationErrors({});
-    showToast('Cập nhật hồ sơ học viên thành công!', 'success');
+      if (!res.success) {
+        showToast(res.error || 'Cập nhật hồ sơ thất bại', 'error');
+        return;
+      }
+
+      setIsEditingProfile(false);
+      setValidationErrors({});
+      showToast('Cập nhật hồ sơ học viên thành công!', 'success');
+      if (res.emailConfirmationPending) {
+        showToast('Một email xác thực đã được gửi đến địa chỉ mới.', 'info');
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Có lỗi xảy ra khi lưu hồ sơ', 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleResetData = () => {
@@ -261,10 +272,22 @@ export const SettingsView: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 text-xs font-semibold bg-primary text-white hover:bg-primary-hover rounded-xl flex items-center gap-1.5 shadow-xs transition-colors btn-motion"
+                disabled={isSaving}
+                className={`px-4 py-2 text-xs font-semibold bg-primary text-white rounded-xl flex items-center gap-1.5 shadow-xs transition-colors btn-motion ${
+                  isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:bg-primary-hover'
+                }`}
               >
-                <Save className="w-3.5 h-3.5" />
-                <span>Lưu thay đổi</span>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Đang lưu...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-3.5 h-3.5" />
+                    <span>Lưu thay đổi</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

@@ -4,6 +4,8 @@
  * Safe fallback against corrupted localStorage schemas.
  */
 
+import { getSupabaseClient, getLearnerSessionId } from '../../services/supabase/client.ts';
+
 export interface StudentProfile {
   id: string;
   displayName: string;
@@ -47,6 +49,13 @@ const DEFAULT_PROFILE: StudentProfile = {
   },
 };
 
+export const PRESET_AVATARS = [
+  { id: 'none', label: 'Viết tắt (Tên)', url: '' },
+  { id: 'avatar_panda', label: 'Gấu Trúc', url: 'https://images.unsplash.com/photo-1564349683136-77e08dba1ef7?w=128&auto=format&fit=crop&q=80' },
+  { id: 'avatar_scholar', label: 'Học Giả', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&auto=format&fit=crop&q=80' },
+  { id: 'avatar_student', label: 'Du Học Sinh', url: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=128&auto=format&fit=crop&q=80' },
+];
+
 export interface ProfileValidationResult {
   isValid: boolean;
   errors: {
@@ -67,6 +76,8 @@ export function validateStudentProfile(data: {
     errors.displayName = 'Tên hiển thị không được để trống';
   } else if (data.displayName.trim().length < 2) {
     errors.displayName = 'Tên hiển thị phải có ít nhất 2 ký tự';
+  } else if (data.displayName.trim().length > 60) {
+    errors.displayName = 'Tên hiển thị không được vượt quá 60 ký tự';
   }
 
   if (!data.schoolEmail || data.schoolEmail.trim().length === 0) {
@@ -115,6 +126,90 @@ export class LearnerRepository {
     this.saveProfile();
     this.notify();
     return this.getProfile();
+  }
+
+  /**
+   * Asynchronously updates the student profile, syncing to local storage,
+   * Supabase `learner_profiles` table, and Supabase Auth if session exists.
+   */
+  public async updateProfileAsync(updates: Partial<StudentProfile>): Promise<{
+    success: boolean;
+    profile: StudentProfile;
+    error?: string;
+    emailConfirmationPending?: boolean;
+  }> {
+    const validation = validateStudentProfile({
+      displayName: updates.displayName,
+      schoolEmail: updates.schoolEmail,
+      dailyGoalMinutes: updates.dailyGoalMinutes,
+    });
+
+    if (!validation.isValid) {
+      const firstError = Object.values(validation.errors)[0] || 'Thông tin hồ sơ không hợp lệ';
+      return {
+        success: false,
+        profile: this.getProfile(),
+        error: firstError,
+      };
+    }
+
+    // 1. Immediately update in-memory and local storage for instant reactive UI
+    const updated = this.updateProfile(updates);
+    let emailConfirmationPending = false;
+
+    // 2. Synchronize to Supabase (Database + Auth)
+    try {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        // A. Check for authenticated user in Supabase Auth
+        try {
+          const { data: authUserRes } = await supabase.auth.getUser();
+          const user = authUserRes?.user;
+          if (user) {
+            const authPayload: { data?: { display_name?: string; full_name?: string }; email?: string } = {};
+            if (updates.displayName) {
+              authPayload.data = {
+                display_name: updated.displayName,
+                full_name: updated.displayName,
+              };
+            }
+            if (updates.schoolEmail && updates.schoolEmail.toLowerCase() !== user.email?.toLowerCase()) {
+              authPayload.email = updates.schoolEmail;
+            }
+
+            if (Object.keys(authPayload).length > 0) {
+              const { data: updateAuthRes, error: updateAuthErr } = await supabase.auth.updateUser(authPayload);
+              if (updateAuthErr) {
+                console.warn('Supabase Auth update notice:', updateAuthErr.message);
+              } else if (updateAuthRes?.user?.new_email) {
+                emailConfirmationPending = true;
+              }
+            }
+          }
+        } catch (authErr) {
+          console.warn('Supabase Auth sync check skipped (non-fatal):', authErr);
+        }
+
+        // B. Upsert into learner_profiles table
+        const profileId = updated.id || getLearnerSessionId();
+        await supabase.from('learner_profiles').upsert({
+          id: profileId,
+          display_name: updated.displayName,
+          daily_goal_minutes: updated.dailyGoalMinutes,
+          target_hsk_level: updated.targetHskLevel,
+          streak_days: updated.studyStreakDays,
+          updated_at: new Date().toISOString(),
+        });
+      }
+    } catch (dbErr) {
+      console.warn('Supabase profile persistence notice (offline-resilient):', dbErr);
+    }
+
+    return {
+      success: true,
+      profile: updated,
+      emailConfirmationPending,
+    };
   }
 
   public subscribe(listener: (profile: StudentProfile) => void): () => void {
