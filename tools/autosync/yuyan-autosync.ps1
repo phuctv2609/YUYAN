@@ -98,7 +98,7 @@ function Invoke-Sync([System.Collections.Generic.HashSet[string]]$changedFiles) 
         Log-Message "Merge in progress detected. Auto-sync deferred." "WARN"
         return
     }
-    if (Test-Path "$RepoPath\.git\rebase-merge" -or Test-Path "$RepoPath\.git\rebase-apply") {
+    if ((Test-Path "$RepoPath\.git\rebase-merge") -or (Test-Path "$RepoPath\.git\rebase-apply")) {
         Log-Message "Rebase in progress detected. Auto-sync deferred." "WARN"
         return
     }
