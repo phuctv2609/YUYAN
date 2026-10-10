@@ -12,9 +12,17 @@ param(
 
 $ErrorActionPreference = "Continue"
 
+# 0. Strict Target Repository Isolation
+$canonicalTarget = "C:\Users\Loan\YUYAN"
+if ((Resolve-Path $RepoPath).Path -ne (Resolve-Path $canonicalTarget).Path) {
+    Write-Host "[SECURITY VIOLATION] Target repository path mismatch. Expected $canonicalTarget, got $RepoPath. Exiting." -ForegroundColor Red
+    exit 1
+}
+
 $ToolsDir = "$RepoPath\tools\autosync"
 $LogFile = "$ToolsDir\autosync.log"
 $PidFile = "$ToolsDir\.autosync.pid"
+$SyncLockFile = "$ToolsDir\.sync.lock"
 
 if (-not (Test-Path $ToolsDir)) {
     New-Item -ItemType Directory -Path $ToolsDir -Force | Out-Null
@@ -60,17 +68,23 @@ $IgnoredPatterns = @(
     "\\backups($|\\)",
     "\.log$",
     "\.pid$",
+    "\.lock$",
     "\.tmp$",
-    "~$"
+    "~[^\\]*$"
 )
 
 $SecretPatterns = @(
-    "\.env$",
-    "\.env\.",
+    "\.env",
     "\.key$",
     "\.pem$",
+    "\.pfx$",
     "id_rsa",
-    "id_ed25519"
+    "id_ed25519",
+    "credentials",
+    "service_role",
+    "service-role",
+    "secret",
+    "token"
 )
 
 function Is-Ignored([string]$path) {
@@ -91,101 +105,138 @@ function Is-Secret([string]$path) {
 function Invoke-Sync([System.Collections.Generic.HashSet[string]]$changedFiles) {
     if ($changedFiles.Count -eq 0) { return }
 
-    Set-Location $RepoPath
-
-    # Check git merge/rebase status
-    if (Test-Path "$RepoPath\.git\MERGE_HEAD") {
-        Log-Message "Merge in progress detected. Auto-sync deferred." "WARN"
-        return
+    # Concurrency Lock
+    if (Test-Path $SyncLockFile) {
+        $lockAge = (Get-Date) - (Get-Item $SyncLockFile).LastWriteTime
+        if ($lockAge.TotalSeconds -lt 60) {
+            Log-Message "Another sync operation is in progress. Deferring sync." "WARN"
+            return
+        } else {
+            Remove-Item $SyncLockFile -Force -ErrorAction SilentlyContinue
+        }
     }
-    if ((Test-Path "$RepoPath\.git\rebase-merge") -or (Test-Path "$RepoPath\.git\rebase-apply")) {
-        Log-Message "Rebase in progress detected. Auto-sync deferred." "WARN"
-        return
-    }
+    Set-Content -Path $SyncLockFile -Value $PID -Encoding utf8
 
-    # Verify branch
-    $currentBranch = (git branch --show-current).Trim()
-    if ($currentBranch -ne $TargetBranch) {
-        Log-Message "Current branch is '$currentBranch', expected '$TargetBranch'. Auto-sync skipped." "WARN"
-        return
-    }
+    try {
+        Set-Location $RepoPath
 
-    # Filter files and check for secrets
-    $filesToStage = @()
-    foreach ($f in $changedFiles) {
-        if (Is-Secret $f) {
-            Log-Message "[SECURITY ALERT] Secret-bearing file detected: $f. Entire sync cycle aborted!" "ERROR"
+        # Check git merge/rebase status
+        if (Test-Path "$RepoPath\.git\MERGE_HEAD") {
+            Log-Message "Merge in progress detected. Auto-sync deferred." "WARN"
             return
         }
-        if (-not (Is-Ignored $f)) {
-            $filesToStage += $f
+        if ((Test-Path "$RepoPath\.git\rebase-merge") -or (Test-Path "$RepoPath\.git\rebase-apply")) {
+            Log-Message "Rebase in progress detected. Auto-sync deferred." "WARN"
+            return
         }
-    }
 
-    if ($filesToStage.Count -eq 0) {
-        return
-    }
+        # Verify branch strictly
+        $currentBranch = (git branch --show-current).Trim()
+        if ($currentBranch -ne $TargetBranch) {
+            Log-Message "Current branch is '$currentBranch', expected '$TargetBranch'. Auto-sync skipped." "WARN"
+            return
+        }
 
-    Log-Message "Detected $($filesToStage.Count) changed file(s): $($filesToStage -join ', ')"
-
-    # Stage files safely using git add -A
-    foreach ($f in $filesToStage) {
-        git add -A -- $f 2>$null
-    }
-
-    $staged = (git diff --cached --name-only)
-    if (-not $staged) {
-        Log-Message "No staged changes after filtering. Skipping commit."
-        return
-    }
-
-    # Verify staged diff for secret tokens
-    $diffOutput = (git diff --cached)
-    if ($diffOutput -match "AIza[0-9A-Za-z-_]{35}|eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9") {
-        Log-Message "[SECURITY ALERT] Staged diff contains forbidden secret patterns! Unstaging immediately." "ERROR"
-        git reset HEAD 2>$null
-        return
-    }
-
-    # Commit
-    $shortSummary = ($filesToStage | ForEach-Object { Split-Path $_ -Leaf }) -join ", "
-    if ($shortSummary.Length -gt 60) {
-        $shortSummary = $shortSummary.Substring(0, 57) + "..."
-    }
-    $commitMsg = "auto(sync): update $shortSummary"
-    
-    git commit -m $commitMsg 2>&1 | Out-Null
-    $commitHash = (git rev-parse --short HEAD).Trim()
-    Log-Message "Created local commit [$commitHash]: $commitMsg"
-
-    # Pre-push remote check
-    git fetch $Remote $TargetBranch --quiet 2>$null
-    $behindCount = (git rev-list "HEAD..$Remote/$TargetBranch" --count 2>$null)
-    if ($behindCount -and [int]$behindCount -gt 0) {
-        Log-Message "Remote has $behindCount newer commit(s). Manual reconcile required. Skipping push." "WARN"
-        return
-    }
-
-    # Normal Push with Bounded Retry
-    $maxRetries = 2
-    $pushed = $false
-    for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
-        Log-Message "Pushing commit $commitHash to $Remote/$TargetBranch (attempt $attempt)..."
-        $pushOutput = (git push $Remote $TargetBranch 2>&1 | Out-String)
-        if ($LASTEXITCODE -eq 0) {
-            $pushed = $true
-            Log-Message "[SUCCESS] Successfully synchronized commit $commitHash to GitHub!"
-            break
-        } else {
-            Log-Message "Push attempt $attempt failed: $($pushOutput.Trim())" "WARN"
-            if ($attempt -lt $maxRetries) {
-                Start-Sleep -Seconds 3
+        # Filter files and check for secrets
+        $filesToStage = @()
+        foreach ($f in $changedFiles) {
+            if (Is-Secret $f) {
+                Log-Message "[SECURITY ALERT] Secret-bearing file detected: $f. Entire sync cycle aborted!" "ERROR"
+                return
+            }
+            if (-not (Is-Ignored $f)) {
+                $filesToStage += $f
             }
         }
-    }
 
-    if (-not $pushed) {
-        Log-Message "Could not push commit $commitHash after $maxRetries attempts. Preserving local commit safely." "ERROR"
+        if ($filesToStage.Count -eq 0) {
+            return
+        }
+
+        Log-Message "Detected $($filesToStage.Count) changed file(s): $($filesToStage -join ', ')"
+
+        # Stage ONLY intended changed files specifically (Never run blind git add -A)
+        foreach ($f in $filesToStage) {
+            $relPath = $f.Replace($RepoPath, "").TrimStart("\/")
+            if (Test-Path $f) {
+                git add -- $relPath 2>$null
+            } else {
+                git rm --cached --quiet --ignore-unmatch -- $relPath 2>$null
+            }
+        }
+
+        $staged = (git diff --cached --name-only)
+        if (-not $staged) {
+            Log-Message "No staged changes after filtering. Skipping commit."
+            return
+        }
+
+        # Run git diff --cached --check for conflict markers / whitespace artifacts
+        git diff --cached --check 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Log-Message "[CHECK FAILED] git diff --cached --check reported errors or conflict markers. Unstaging." "WARN"
+            git reset HEAD 2>$null
+            return
+        }
+
+        # Verify staged diff for secret tokens
+        $diffOutput = (git diff --cached)
+        if ($diffOutput -match "AIza[0-9A-Za-z-_]{35}|eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9|ghp_[0-9A-Za-z]{36}|-----BEGIN (RSA |EC |OPENSSH |PRIVATE )?KEY-----") {
+            Log-Message "[SECURITY ALERT] Staged diff contains forbidden secret patterns! Unstaging immediately." "ERROR"
+            git reset HEAD 2>$null
+            return
+        }
+
+        # Commit
+        $shortSummary = ($filesToStage | ForEach-Object { Split-Path $_ -Leaf }) -join ", "
+        if ($shortSummary.Length -gt 60) {
+            $shortSummary = $shortSummary.Substring(0, 57) + "..."
+        }
+        $commitMsg = "auto(sync): update $shortSummary"
+
+        git commit -m $commitMsg 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Log-Message "Commit creation skipped or failed. Working tree clean." "INFO"
+            return
+        }
+        $commitHash = (git rev-parse --short HEAD).Trim()
+        Log-Message "Created local commit [$commitHash]: $commitMsg"
+
+        # Pre-push remote divergence check
+        git fetch $Remote $TargetBranch --quiet 2>$null
+        $behindCount = (git rev-list "HEAD..$Remote/$TargetBranch" --count 2>$null)
+        if ($behindCount -and [int]$behindCount -gt 0) {
+            Log-Message "Remote has $behindCount newer commit(s). Stopping auto-push to prevent divergence. Manual reconcile required." "WARN"
+            return
+        }
+
+        # Normal Push with Bounded Retry (Never force-push)
+        $maxRetries = 2
+        $pushed = $false
+        for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
+            Log-Message "Pushing commit $commitHash to $Remote/$TargetBranch (attempt $attempt)..."
+            $pushOutput = (git push $Remote $TargetBranch 2>&1 | Out-String)
+            if ($LASTEXITCODE -eq 0) {
+                $pushed = $true
+                Log-Message "[SUCCESS] Successfully synchronized commit $commitHash to GitHub!"
+                break
+            } else {
+                Log-Message "Push attempt $attempt failed: $($pushOutput.Trim())" "WARN"
+                if ($attempt -lt $maxRetries) {
+                    Start-Sleep -Seconds 3
+                }
+            }
+        }
+
+        if (-not $pushed) {
+            Log-Message "Could not push commit $commitHash after $maxRetries attempts. Preserving local commit safely." "ERROR"
+        }
+    } catch {
+        Log-Message "Exception during sync cycle: $_" "ERROR"
+    } finally {
+        if (Test-Path $SyncLockFile) {
+            Remove-Item $SyncLockFile -Force -ErrorAction SilentlyContinue
+        }
     }
 }
 
@@ -212,28 +263,33 @@ Log-Message "FileSystemWatcher registered. Listening for file changes..."
 
 try {
     while ($true) {
-        Start-Sleep -Milliseconds 500
+        try {
+            Start-Sleep -Milliseconds 500
 
-        if ($global:yuyan_sync_queue.Count -gt 0) {
-            $elapsed = ([DateTime]::UtcNow - $global:yuyan_last_event_time).TotalSeconds
-            if ($elapsed -ge $DebounceSeconds) {
-                $rawItems = @()
-                $item = ""
-                while ($global:yuyan_sync_queue.TryDequeue([ref]$item)) {
-                    $rawItems += $item
-                }
+            if ($global:yuyan_sync_queue.Count -gt 0) {
+                $elapsed = ([DateTime]::UtcNow - $global:yuyan_last_event_time).TotalSeconds
+                if ($elapsed -ge $DebounceSeconds) {
+                    $rawItems = @()
+                    $item = ""
+                    while ($global:yuyan_sync_queue.TryDequeue([ref]$item)) {
+                        $rawItems += $item
+                    }
 
-                $filteredSet = [System.Collections.Generic.HashSet[string]]::new()
-                foreach ($raw in $rawItems) {
-                    if (-not (Is-Ignored $raw)) {
-                        $filteredSet.Add($raw) | Out-Null
+                    $filteredSet = [System.Collections.Generic.HashSet[string]]::new()
+                    foreach ($raw in $rawItems) {
+                        if (-not (Is-Ignored $raw)) {
+                            $filteredSet.Add($raw) | Out-Null
+                        }
+                    }
+
+                    if ($filteredSet.Count -gt 0) {
+                        Invoke-Sync $filteredSet
                     }
                 }
-
-                if ($filteredSet.Count -gt 0) {
-                    Invoke-Sync $filteredSet
-                }
             }
+        } catch {
+            Log-Message "Unexpected error in watcher main loop: $_" "ERROR"
+            Start-Sleep -Seconds 1
         }
     }
 } finally {
@@ -246,6 +302,9 @@ try {
     Unregister-Event -SourceIdentifier $subRenamed.Name -ErrorAction SilentlyContinue
     if (Test-Path $PidFile) {
         Remove-Item $PidFile -Force -ErrorAction SilentlyContinue
+    }
+    if (Test-Path $SyncLockFile) {
+        Remove-Item $SyncLockFile -Force -ErrorAction SilentlyContinue
     }
     Log-Message "YUYAN Auto-Sync Watcher stopped."
 }

@@ -39,5 +39,4 @@ scratch/
 # Auto-sync Runtime Files
 tools/autosync/*.log
 tools/autosync/.autosync.pid
-
-
+tools/autosync/.sync.lock
