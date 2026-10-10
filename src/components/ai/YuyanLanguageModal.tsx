@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X, Check } from 'lucide-react';
 import { useYuyanAI } from '../../context/YuyanAIContext';
 import { SpeechRecognitionLanguage } from '../../services/speech/speechTypes';
@@ -8,6 +9,7 @@ export const YuyanLanguageModal: React.FC = () => {
     useYuyanAI();
 
   if (!isLanguageModalOpen) return null;
+  if (typeof document === 'undefined') return null;
 
   const options: Array<{
     id: SpeechRecognitionLanguage;
@@ -40,9 +42,9 @@ export const YuyanLanguageModal: React.FC = () => {
     closeLanguageModal();
   };
 
-  return (
-    <div className="fixed inset-0 z-55 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="w-full max-w-sm bg-surface dark:bg-slate-900 rounded-3xl border border-border-subtle shadow-xl overflow-hidden p-5 space-y-4 animate-in zoom-in-95 duration-150">
+  return createPortal(
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-150 isolate">
+      <div className="w-full max-w-sm bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden p-5 space-y-4 animate-in zoom-in-95 duration-150" style={{ backgroundColor: 'var(--surface, #ffffff)' }}>
         <div className="flex items-center justify-between pb-3 border-b border-border-subtle/80">
           <h3 className="text-sm font-bold text-text-primary">Chọn ngôn ngữ nhận diện</h3>
           <button
@@ -90,6 +92,7 @@ export const YuyanLanguageModal: React.FC = () => {
           })}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

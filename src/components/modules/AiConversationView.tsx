@@ -288,15 +288,15 @@ export const AiConversationView: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Hero Assistant Character with Speech Bubble */}
-        <div className="relative z-10 flex flex-col items-center shrink-0">
-          {/* Friendly Speech Bubble */}
-          <div className="absolute -top-7 -left-12 sm:-left-20 hidden sm:block bg-white/95 dark:bg-slate-800/95 text-slate-700 dark:text-slate-200 px-3.5 py-2 rounded-2xl rounded-br-xs border border-sky-200 dark:border-slate-700 shadow-md text-2xs font-bold max-w-[190px] text-center leading-snug animate-in fade-in duration-500">
-            Hỏi bất kỳ điều gì về tiếng Trung, mình luôn sẵn sàng hỗ trợ!
-          </div>
-
-          {/* Large Hero Teacher Avatar */}
-          <YuyanAIAvatar size="hero" showOnlineStatus={true} />
+        {/* Right Decorative Graphic — Clean, restrained, within bounds */}
+        <div className="hidden md:flex flex-col items-center justify-center px-6 py-4 rounded-2xl bg-white/60 dark:bg-slate-800/50 border border-sky-200/50 dark:border-slate-700/50 shadow-2xs backdrop-blur-xs shrink-0 select-none">
+          <YuyanAIAvatar size="lg" showOnlineStatus={true} />
+          <span className="text-2xs font-bold text-slate-700 dark:text-slate-200 mt-2">
+            Gia sư Yuyan AI
+          </span>
+          <span className="text-[10px] text-text-muted">
+            Trợ giảng tiếng Trung 24/7
+          </span>
         </div>
       </div>
 

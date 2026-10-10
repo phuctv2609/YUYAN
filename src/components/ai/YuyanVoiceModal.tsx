@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Mic,
   X,
@@ -56,6 +57,7 @@ export const YuyanVoiceModal: React.FC = () => {
   }, [isVoiceModalOpen]);
 
   if (!isVoiceModalOpen) return null;
+  if (typeof document === 'undefined') return null;
 
   const formatTimer = (totalSeconds: number) => {
     const mins = Math.floor(totalSeconds / 60);
@@ -73,9 +75,9 @@ export const YuyanVoiceModal: React.FC = () => {
   const isSpeaking = state === 'speaking';
   const isGenerating = state === 'generating_response';
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md bg-surface dark:bg-slate-900 rounded-3xl border border-border-subtle shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+  return createPortal(
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200 isolate">
+      <div className="relative w-full max-w-md bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200" style={{ backgroundColor: 'var(--surface, #ffffff)' }}>
         {/* Top Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle/80 bg-surface-secondary/40">
           <div className="flex items-center gap-2.5">
@@ -266,6 +268,7 @@ export const YuyanVoiceModal: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
