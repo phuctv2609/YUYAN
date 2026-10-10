@@ -311,6 +311,57 @@ class AiApiService {
       drillPrompt: `Luyện đọc lại ${params.targetPinyin} 3 lần`,
     };
   }
+
+  /**
+   * Free-Question AI Tutor Chat (Unrestricted Chinese Learning Q&A)
+   */
+  async sendFreeChatMessage(params: {
+    question: string;
+    history?: Array<{ sender: 'user' | 'ai'; text: string }>;
+    contextItem?: any;
+  }): Promise<string> {
+    const data = await this.invokeEdgeFunction({
+      action: 'free-chat',
+      question: params.question,
+      history: params.history,
+      contextItem: params.contextItem,
+    });
+
+    if (!data.success && data.error) {
+      const err = new Error(data.message || 'Lỗi khi gửi câu hỏi tới Gia sư AI');
+      (err as any).code = data.error;
+      throw err;
+    }
+
+    return data.answer || 'Chưa nhận được câu trả lời từ Gia sư AI.';
+  }
+
+  /**
+   * Contextual Grammar AI Assistant (Detail Pages)
+   */
+  async askGrammarAi(params: {
+    mode: 'explain_simple' | 'explain_deep' | 'generate_examples' | 'compare' | 'quiz' | 'custom_query';
+    grammarPoint: any;
+    comparePattern?: string;
+    customQuery?: string;
+  }): Promise<any> {
+    const data = await this.invokeEdgeFunction({
+      action: 'grammar-ai',
+      mode: params.mode,
+      grammarPoint: params.grammarPoint,
+      comparePattern: params.comparePattern,
+      customQuery: params.customQuery,
+    });
+
+    if (!data.success && data.error) {
+      const err = new Error(data.message || 'Lỗi khi gửi yêu cầu tới AI Ngữ pháp');
+      (err as any).code = data.error;
+      throw err;
+    }
+
+    return data.result;
+  }
 }
 
 export const aiApiService = new AiApiService();
+

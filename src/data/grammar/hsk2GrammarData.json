@@ -1,0 +1,664 @@
+[
+  {
+    "id": "hsk2_1_01",
+    "level": 1,
+    "title": "Câu phán đoán với 是 (shì) — Là",
+    "pattern": "S + 是 + N",
+    "positivePattern": "S + 是 + N",
+    "negativePattern": "S + 不是 + N",
+    "interrogativePattern": "S + 是 + N + 吗？",
+    "category": "Câu phán đoán",
+    "explanation": "Dùng khẳng định danh tính, nghề nghiệp, quốc tịch. Phủ định là 不是.",
+    "examples": [
+      {
+        "hanzi": "我是学生。",
+        "pinyin": "Wǒ shì xuésheng.",
+        "vietnamese": "Tôi là học sinh."
+      },
+      {
+        "hanzi": "他不是老师。",
+        "pinyin": "Tā bù shì lǎoshī.",
+        "vietnamese": "Anh ấy không phải là giáo viên."
+      },
+      {
+        "hanzi": "你是中国人吗？",
+        "pinyin": "Nǐ shì Zhōngguórén ma?",
+        "vietnamese": "Bạn là người Trung Quốc phải không?"
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK1",
+    "normalizedLevel": 1,
+    "bandLabel": "HSK 2.0 Cấp 1",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_1_02",
+    "level": 1,
+    "title": "Câu vị ngữ tính từ (Không dùng 是)",
+    "pattern": "S + Phó từ mức độ + Adj",
+    "positivePattern": "S + 很/非常 + Adj",
+    "negativePattern": "S + 不 + Adj",
+    "interrogativePattern": "S + Adj + 吗？",
+    "category": "Vị ngữ tính từ",
+    "explanation": "Miêu tả tính chất đặc điểm. Trước tính từ dùng 很, 非常, không dùng 是.",
+    "examples": [
+      {
+        "hanzi": "今天天气很好。",
+        "pinyin": "Jīntiān tiānqì hěn hǎo.",
+        "vietnamese": "Hôm nay thời tiết rất đẹp."
+      },
+      {
+        "hanzi": "汉语不太难。",
+        "pinyin": "Hànyǔ bù tài nán.",
+        "vietnamese": "Tiếng Hán không khó lắm."
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK1",
+    "normalizedLevel": 1,
+    "bandLabel": "HSK 2.0 Cấp 1",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_1_03",
+    "level": 1,
+    "title": "Câu tồn tại và sở hữu với 有 (yǒu)",
+    "pattern": "Địa điểm / S + 有 + N",
+    "positivePattern": "S + 有 + N",
+    "negativePattern": "S + 没有 + N",
+    "interrogativePattern": "S + 有 + N + 吗？ / 有没有 + N？",
+    "category": "Câu chữ 有",
+    "explanation": "Biểu thị sở hữu hoặc sự tồn tại. Phủ định tuyệt đối dùng 没有, không dùng 不有.",
+    "examples": [
+      {
+        "hanzi": "我有两只猫。",
+        "pinyin": "Wǒ yǒu liǎng zhī māo.",
+        "vietnamese": "Tôi có hai con mèo."
+      },
+      {
+        "hanzi": "桌子上有一本书。",
+        "pinyin": "Zhuōzi shang yǒu yì běn shū.",
+        "vietnamese": "Trên bàn có một quyển sách."
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK1",
+    "normalizedLevel": 1,
+    "bandLabel": "HSK 2.0 Cấp 1",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_1_04",
+    "level": 1,
+    "title": "Trợ từ nghi vấn 吗, 呢, 吧",
+    "pattern": "Câu trần thuật + 吗 / 呢 / 吧",
+    "positivePattern": "Câu + 吗？",
+    "negativePattern": "Không áp dụng",
+    "interrogativePattern": "Câu + 吗/呢/吧？",
+    "category": "Trợ từ ngữ khí",
+    "explanation": "吗 hỏi đúng sai; 呢 hỏi vị trí hoặc tiếp diễn (\"còn... thì sao?\"); 吧 hỏi phỏng đoán, thương lượng.",
+    "examples": [
+      {
+        "hanzi": "你去学校吗？",
+        "pinyin": "Nǐ qù xuéxiào ma?",
+        "vietnamese": "Bạn đi đến trường không?"
+      },
+      {
+        "hanzi": "我的手机呢？",
+        "pinyin": "Wǒ de shǒujī ne?",
+        "vietnamese": "Điện thoại của tôi đâu rồi?"
+      },
+      {
+        "hanzi": "我们走吧。",
+        "pinyin": "Wǒmen zǒu ba.",
+        "vietnamese": "Chúng ta đi thôi."
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK1",
+    "normalizedLevel": 1,
+    "bandLabel": "HSK 2.0 Cấp 1",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_1_05",
+    "level": 1,
+    "title": "Trợ từ kết cấu 的 (de) — Định ngữ",
+    "pattern": "Định ngữ + 的 + Trung tâm ngữ",
+    "positivePattern": "N1/Adj + 的 + N2",
+    "negativePattern": "Không áp dụng",
+    "interrogativePattern": "谁的 + N？",
+    "category": "Trợ từ kết cấu",
+    "explanation": "Nối định ngữ với trung tâm ngữ, biểu thị sở hữu hoặc tính chất.",
+    "examples": [
+      {
+        "hanzi": "这是我的书。",
+        "pinyin": "Zhè shì wǒ de shū.",
+        "vietnamese": "Đây là sách của tôi."
+      },
+      {
+        "hanzi": "漂亮的衣服。",
+        "pinyin": "Piàoliang de yīfu.",
+        "vietnamese": "Bộ quần áo đẹp."
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK1",
+    "normalizedLevel": 1,
+    "bandLabel": "HSK 2.0 Cấp 1",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_2_01",
+    "level": 2,
+    "title": "Câu so sánh hơn với 比 (bǐ)",
+    "pattern": "A + 比 + B + Adj (+ Số lượng)",
+    "positivePattern": "A + 比 + B + Adj",
+    "negativePattern": "A + 没有 + B + Adj",
+    "interrogativePattern": "A + 比 + B + Adj + 吗？",
+    "category": "Câu so sánh",
+    "explanation": "So sánh mức độ giữa A và B. Phủ định dùng 沒有 hoặc 不比.",
+    "examples": [
+      {
+        "hanzi": "哥哥比我高。",
+        "pinyin": "Gēge bǐ wǒ gāo.",
+        "vietnamese": "Anh trai cao hơn tôi."
+      },
+      {
+        "hanzi": "今天比昨天冷一点儿。",
+        "pinyin": "Jīntiān bǐ zuótiān lěng yìdiǎnr.",
+        "vietnamese": "Hôm nay lạnh hơn hôm qua một chút."
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK2",
+    "normalizedLevel": 2,
+    "bandLabel": "HSK 2.0 Cấp 2",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_2_02",
+    "level": 2,
+    "title": "Động tác sắp xảy ra: 要……了 / 快要……了",
+    "pattern": "S + 快要/就要/要 + V + 了",
+    "positivePattern": "S + 快要 + V + 了",
+    "negativePattern": "Chưa xảy ra (S + 还没 + V)",
+    "interrogativePattern": "S + 要 + V + 了吗？",
+    "category": "Thì và thể",
+    "explanation": "Biểu thị sự việc sắp sửa xảy ra trong tương lai gần.",
+    "examples": [
+      {
+        "hanzi": "火车快要开了。",
+        "pinyin": "Huǒchē kuàiyào kāi le.",
+        "vietnamese": "Tàu hỏa sắp chạy rồi."
+      },
+      {
+        "hanzi": "新年就要到了。",
+        "pinyin": "Xīnnián jiù yào dào le.",
+        "vietnamese": "Năm mới sắp đến rồi."
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK2",
+    "normalizedLevel": 2,
+    "bandLabel": "HSK 2.0 Cấp 2",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_2_03",
+    "level": 2,
+    "title": "Trợ từ động thái 了 (le) — Hoàn thành",
+    "pattern": "S + V + 了 + (Tân ngữ)",
+    "positivePattern": "S + V + 了",
+    "negativePattern": "S + 没(有) + V (bỏ 了)",
+    "interrogativePattern": "S + V + 了吗？ / S + V + 了没有？",
+    "category": "Trợ từ động thái",
+    "explanation": "Biểu thị hành động đã hoàn thành. Trong câu phủ định có 没/没有 thì BỎ 了.",
+    "examples": [
+      {
+        "hanzi": "我吃了早饭。",
+        "pinyin": "Wǒ chī le zǎofàn.",
+        "vietnamese": "Tôi đã ăn sáng rồi."
+      },
+      {
+        "hanzi": "他没去学校。",
+        "pinyin": "Tā méi qù xuéxiào.",
+        "vietnamese": "Anh ấy không đi đến trường (chưa đi)."
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK2",
+    "normalizedLevel": 2,
+    "bandLabel": "HSK 2.0 Cấp 2",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_2_04",
+    "level": 2,
+    "title": "Trợ từ động thái 过 (guo) — Trải nghiệm",
+    "pattern": "S + V + 过 + (O)",
+    "positivePattern": "S + V + 过 + O",
+    "negativePattern": "S + 没(有) + V + 过 + O",
+    "interrogativePattern": "S + V + 过 + O + 吗？",
+    "category": "Trợ từ động thái",
+    "explanation": "Biểu thị từng có trải nghiệm làm việc gì đó trong quá khứ.",
+    "examples": [
+      {
+        "hanzi": "我去过北京。",
+        "pinyin": "Wǒ qù guo Běijīng.",
+        "vietnamese": "Tôi từng đi Bắc Kinh."
+      },
+      {
+        "hanzi": "我没吃过烤鸭。",
+        "pinyin": "Wǒ méi chī guo kǎoyā.",
+        "vietnamese": "Tôi chưa từng ăn vịt quay."
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK2",
+    "normalizedLevel": 2,
+    "bandLabel": "HSK 2.0 Cấp 2",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_2_05",
+    "level": 2,
+    "title": "Bổ ngữ trạng thái với 得 (de)",
+    "pattern": "S + V + 得 + Adj / Cụm miêu tả",
+    "positivePattern": "S + V + 得 + 很 + Adj",
+    "negativePattern": "S + V + 得 + 不 + Adj",
+    "interrogativePattern": "S + V + 得 + Adj + 吗？",
+    "category": "Bổ ngữ",
+    "explanation": "Đánh giá, miêu tả mức độ hoặc kết quả của hành động.",
+    "examples": [
+      {
+        "hanzi": "他说汉语说得很好。",
+        "pinyin": "Tā shuō Hànyǔ shuō de hěn hǎo.",
+        "vietnamese": "Anh ấy nói tiếng Hán rất giỏi."
+      },
+      {
+        "hanzi": "他跑得不快。",
+        "pinyin": "Tā pǎo de bú kuài.",
+        "vietnamese": "Anh ấy chạy không nhanh."
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK2",
+    "normalizedLevel": 2,
+    "bandLabel": "HSK 2.0 Cấp 2",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_3_01",
+    "level": 3,
+    "title": "Câu chữ 把 (bǎ) cơ bản",
+    "pattern": "S + 把 + Tân ngữ + V + Thành phần khác",
+    "positivePattern": "S + 把 + O + V + 在/到/给/成...",
+    "negativePattern": "S + 没(有) + 把 + O + V...",
+    "interrogativePattern": "S + 把 + O + V...了吗？",
+    "category": "Câu vị ngữ đặc thù",
+    "explanation": "Tác động lên tân ngữ khiến nó thay đổi trạng thái hoặc vị trí.",
+    "examples": [
+      {
+        "hanzi": "请把门关上。",
+        "pinyin": "Qǐng bǎ mén guān shang.",
+        "vietnamese": "Xin hãy đóng cửa lại."
+      },
+      {
+        "hanzi": "他把作业做完了。",
+        "pinyin": "Tā bǎ zuòyè zuò wán le.",
+        "vietnamese": "Anh ấy đã làm xong bài tập rồi."
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK3",
+    "normalizedLevel": 3,
+    "bandLabel": "HSK 2.0 Cấp 3",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_3_02",
+    "level": 3,
+    "title": "Câu chữ 被 (bèi) — Thể bị động",
+    "pattern": "Chủ ngữ (bị tác động) + 被 + Tác nhân + V + Thành phần khác",
+    "positivePattern": "S + 被 + (Tác nhân) + V + ...",
+    "negativePattern": "S + 没 + 被 + ...",
+    "interrogativePattern": "S + 被...了吗？",
+    "category": "Câu vị ngữ đặc thù",
+    "explanation": "Biểu thị sự việc bị tác động, thường mang sắc thái không mong muốn hoặc khách quan.",
+    "examples": [
+      {
+        "hanzi": "蛋糕被弟弟吃了。",
+        "pinyin": "Dàngāo bèi dìdi chī le.",
+        "vietnamese": "Bánh kem bị em trai ăn mất rồi."
+      },
+      {
+        "hanzi": "钱包被小偷偷走了。",
+        "pinyin": "Qiánbāo bèi xiǎotōu tōu zǒu le.",
+        "vietnamese": "Ví tiền đã bị kẻ trộm lấy đi."
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK3",
+    "normalizedLevel": 3,
+    "bandLabel": "HSK 2.0 Cấp 3",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_3_03",
+    "level": 3,
+    "title": "Cấu trúc nhấn mạnh 是……的 (shì...de)",
+    "pattern": "S + 是 + (Thời gian/Địa điểm/Phương thức) + V + 的",
+    "positivePattern": "S + 是 + [Nhấn mạnh] + V + 的",
+    "negativePattern": "S + 不是 + [Nhấn mạnh] + V + 的",
+    "interrogativePattern": "S + 是 + ... + 的吗？",
+    "category": "Cấu trúc nhấn mạnh",
+    "explanation": "Dùng cho sự việc ĐÃ XẢY RA, nhằm nhấn mạnh thời gian, địa điểm, cách thức, hoặc người thực hiện.",
+    "examples": [
+      {
+        "hanzi": "我是坐飞机来的。",
+        "pinyin": "Wǒ shì zuò fēijī lái de.",
+        "vietnamese": "Tôi là đi máy bay đến (nhấn mạnh phương tiện)."
+      },
+      {
+        "hanzi": "我们是去年认识的。",
+        "pinyin": "Wǒmen shì qùnián rènshi de.",
+        "vietnamese": "Chúng tôi quen nhau vào năm ngoái (nhấn mạnh thời gian)."
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK3",
+    "normalizedLevel": 3,
+    "bandLabel": "HSK 2.0 Cấp 3",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_3_04",
+    "level": 3,
+    "title": "Bổ ngữ xu hướng đơn và kép",
+    "pattern": "V + 来/去 (hoặc 上/下/进/出/回/过/起 + 来/去)",
+    "positivePattern": "V + Xu hướng",
+    "negativePattern": "S + 没 + V + Xu hướng",
+    "interrogativePattern": "V + Xu hướng + 了吗？",
+    "category": "Bổ ngữ",
+    "explanation": "來 là tiến về phía người nói; 去 là rời xa người nói.",
+    "examples": [
+      {
+        "hanzi": "老师走进了教室。",
+        "pinyin": "Lǎoshī zǒu jìn le jiàoshì.",
+        "vietnamese": "Thầy giáo đã bước vào phòng học."
+      },
+      {
+        "hanzi": "你快上来吧！",
+        "pinyin": "Nǐ kuài shàng lai ba!",
+        "vietnamese": "Bạn mau lên đây đi!"
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK3",
+    "normalizedLevel": 3,
+    "bandLabel": "HSK 2.0 Cấp 3",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_4_01",
+    "level": 4,
+    "title": "Cặp liên từ Mặc dù... nhưng: 虽然……但是……",
+    "pattern": "虽然 + Phân câu 1，但是/可是 + Phân câu 2",
+    "positivePattern": "虽然...但是...",
+    "negativePattern": "Không áp dụng",
+    "interrogativePattern": "Không áp dụng",
+    "category": "Câu phức",
+    "explanation": "Biểu thị quan hệ chuyển ý nhượng bộ.",
+    "examples": [
+      {
+        "hanzi": "虽然工作很累，但是他很开心。",
+        "pinyin": "Suīrán gōngzuò hěn lèi, dànshì tā hěn kāixīn.",
+        "vietnamese": "Mặc dù công việc rất mệt mỏi, nhưng anh ấy rất vui."
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK4",
+    "normalizedLevel": 4,
+    "bandLabel": "HSK 2.0 Cấp 4",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_4_02",
+    "level": 4,
+    "title": "Cặp liên từ Không những... mà còn: 不但……而且……",
+    "pattern": "不但 + A，而且 + B",
+    "positivePattern": "不但...而且...",
+    "negativePattern": "Không áp dụng",
+    "interrogativePattern": "Không áp dụng",
+    "category": "Câu phức",
+    "explanation": "Biểu thị quan hệ tăng tiến.",
+    "examples": [
+      {
+        "hanzi": "她不但漂亮，而且很聪明。",
+        "pinyin": "Tā búdàn piàoliang, érqiě hěn cōngmíng.",
+        "vietnamese": "Cô ấy không những xinh đẹp mà còn rất thông minh."
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK4",
+    "normalizedLevel": 4,
+    "bandLabel": "HSK 2.0 Cấp 4",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_4_03",
+    "level": 4,
+    "title": "Bổ ngữ khả năng: V + 得/不 + Bổ ngữ kết quả/xu hướng",
+    "pattern": "V + 得/不 + 了/完/见/懂...",
+    "positivePattern": "V + 得 + C",
+    "negativePattern": "V + 不 + C",
+    "interrogativePattern": "V + 得 + C + 吗？ / V 得 C V 不 C？",
+    "category": "Bổ ngữ",
+    "explanation": "Biểu thị trong điều kiện nhất định có thể hoặc không thể đạt được kết quả.",
+    "examples": [
+      {
+        "hanzi": "这本书你看得懂吗？",
+        "pinyin": "Zhè běn shū nǐ kàn de dǒng ma?",
+        "vietnamese": "Cuốn sách này bạn đọc có hiểu không?"
+      },
+      {
+        "hanzi": "字太小了，我看不清楚。",
+        "pinyin": "Zì tài xiǎo le, wǒ kàn bu qīngchu.",
+        "vietnamese": "Chữ nhỏ quá, tôi nhìn không rõ."
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK4",
+    "normalizedLevel": 4,
+    "bandLabel": "HSK 2.0 Cấp 4",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_5_01",
+    "level": 5,
+    "title": "Liên từ Chỉ cần... thì: 只要……就……",
+    "pattern": "只要 + Điều kiện đủ，就 + Kết quả",
+    "positivePattern": "只要...就...",
+    "negativePattern": "Không áp dụng",
+    "interrogativePattern": "Không áp dụng",
+    "category": "Câu phức điều kiện",
+    "explanation": "Chỉ cần có điều kiện này thì nhất định sinh ra kết quả.",
+    "examples": [
+      {
+        "hanzi": "只要坚持，就一定会成功。",
+        "pinyin": "Zhǐyào jiānchí, jiù yídìng huì chénggōng.",
+        "vietnamese": "Chỉ cần kiên trì thì nhất định sẽ thành công."
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK5",
+    "normalizedLevel": 5,
+    "bandLabel": "HSK 2.0 Cấp 5",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_5_02",
+    "level": 5,
+    "title": "Liên từ Chỉ có... mới: 只有……才……",
+    "pattern": "只有 + Điều kiện duy nhất，才 + Kết quả",
+    "positivePattern": "只有...才...",
+    "negativePattern": "Không áp dụng",
+    "interrogativePattern": "Không áp dụng",
+    "category": "Câu phức điều kiện",
+    "explanation": "Biểu thị điều kiện tất yếu, không có nó thì không thể có kết quả.",
+    "examples": [
+      {
+        "hanzi": "只有努力学习，才能考上大学。",
+        "pinyin": "Zhǐyǒu nǔlì xuéxí, cái néng kǎo shàng dàxué.",
+        "vietnamese": "Chỉ có nỗ lực học tập thì mới thi đỗ đại học."
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK5",
+    "normalizedLevel": 5,
+    "bandLabel": "HSK 2.0 Cấp 5",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_5_03",
+    "level": 5,
+    "title": "Phó từ nối liên tiếp: 既然……就…… (Đã... thì...)",
+    "pattern": "既然 + Tiền đề đã thành sự thật，就 + Kết luận/Hành động",
+    "positivePattern": "既然...就...",
+    "negativePattern": "Không áp dụng",
+    "interrogativePattern": "Không áp dụng",
+    "category": "Câu phức nhân quả",
+    "explanation": "Dựa trên một sự thật đã biết trước để đưa ra phán đoán hoặc đề xuất.",
+    "examples": [
+      {
+        "hanzi": "既然你生病了，就别去上班了。",
+        "pinyin": "Jìrán nǐ shēngbìng le, jiù bié qù shàngbān le.",
+        "vietnamese": "Đã ốm rồi thì đừng đi làm nữa."
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK5",
+    "normalizedLevel": 5,
+    "bandLabel": "HSK 2.0 Cấp 5",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_6_01",
+    "level": 6,
+    "title": "Cấu trúc Thà rằng... chứ không: 宁可……也不……",
+    "pattern": "宁可 + Lựa chọn chấp nhận nhược điểm，也不 + Phương án kiên quyết từ chối",
+    "positivePattern": "宁可...也不...",
+    "negativePattern": "Không áp dụng",
+    "interrogativePattern": "Không áp dụng",
+    "category": "Câu phức lựa chọn",
+    "explanation": "Sau khi so sánh hai điều bất lợi, thà chọn cái ít tệ hơn chứ kiên quyết không chọn cái kia.",
+    "examples": [
+      {
+        "hanzi": "我宁可吃苦，也决不向困难低头。",
+        "pinyin": "Wǒ nìngkě chīkǔ, yě juébù xiàng kùnnán dītóu.",
+        "vietnamese": "Tôi thà chịu gian khổ chứ quyết không cúi đầu trước khó khăn."
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK6",
+    "normalizedLevel": 6,
+    "bandLabel": "HSK 2.0 Cấp 6",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  },
+  {
+    "id": "hsk2_6_02",
+    "level": 6,
+    "title": "Văn phong văn ngôn hiện đại: 以……为…… (Lấy... làm...)",
+    "pattern": "S + 以 + A + 为 + B",
+    "positivePattern": "S + 以 + A + 为 + B",
+    "negativePattern": "不以...为...",
+    "interrogativePattern": "以...为什么？",
+    "category": "Cấu trúc thư diện",
+    "explanation": "Thường dùng trong văn viết trang trọng, mang nghĩa \"xem A là B\", \"lấy A làm B\".",
+    "examples": [
+      {
+        "hanzi": "公司以诚信为本。",
+        "pinyin": "Gōngsī yǐ chéngxìn wéi běn.",
+        "vietnamese": "Công ty lấy chữ tín làm gốc."
+      },
+      {
+        "hanzi": "我们以客户的需求为中心。",
+        "pinyin": "Wǒmen yǐ kèhù de xūqiú wéi zhōngxīn.",
+        "vietnamese": "Chúng tôi lấy nhu cầu của khách hàng làm trung tâm."
+      }
+    ],
+    "hskVersion": "hsk2",
+    "syllabusEdition": "Hanban-2015",
+    "sourceLevel": "HSK6",
+    "normalizedLevel": 6,
+    "bandLabel": "HSK 2.0 Cấp 6",
+    "sourceUrl": "Hanban 2015 HSK 2.0 Official Syllabus Guidelines",
+    "sourceRevision": "2015-Authoritative",
+    "verificationStatus": "verified_official_source"
+  }
+]

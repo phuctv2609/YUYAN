@@ -7,6 +7,8 @@
  */
 
 import { getSupabaseClient } from '../../services/supabase/client';
+import hsk3CatalogData from '../grammar/hsk3GrammarData.json';
+import hsk2CatalogData from '../grammar/hsk2GrammarData.json';
 
 export interface GrammarExercise {
   id: string;
@@ -25,8 +27,15 @@ export interface CommonMistake {
 export interface GrammarPoint {
   id: string;
   level: number;
+  hskVersion?: 'hsk2' | 'hsk3';
+  syllabusEdition?: string;
+  sourceLevel?: string;
+  normalizedLevel?: number;
+  bandLabel?: string;
   gfLevel?: string;
   category: string;
+  subCategory?: string;
+  detailNote?: string;
   lessonId?: string;
   lessonNumber?: number;
   title: string;
@@ -36,15 +45,20 @@ export interface GrammarPoint {
   interrogativePattern?: string;
   explanation: string;
   structureSummary?: string;
+  meaningVi?: string;
   examples: Array<{
     hanzi: string;
-    pinyin: string;
-    vietnamese: string;
+    pinyin?: string;
+    vietnamese?: string;
+    source?: string;
   }>;
   commonMistakes?: CommonMistake[];
   practiceExercises?: GrammarExercise[];
   notes?: string;
   sortOrder?: number;
+  sourceUrl?: string;
+  sourceRevision?: string;
+  verificationStatus?: 'verified_official_source' | 'verified_curated' | 'source_imported';
 }
 
 export const AUTHORITATIVE_GRAMMAR_POINTS: GrammarPoint[] = [
@@ -683,24 +697,51 @@ export const AUTHORITATIVE_GRAMMAR_POINTS: GrammarPoint[] = [
 ];
 
 export class GrammarRepository {
-  private cache: GrammarPoint[] = AUTHORITATIVE_GRAMMAR_POINTS;
+  private hsk3Catalog: GrammarPoint[] = (hsk3CatalogData as any) || [];
+  private hsk2Catalog: GrammarPoint[] = (hsk2CatalogData && (hsk2CatalogData as any).length > 0)
+    ? (hsk2CatalogData as any)
+    : AUTHORITATIVE_GRAMMAR_POINTS;
+  private cache: GrammarPoint[] = [
+    ...((hsk3CatalogData as any) || []),
+    ...AUTHORITATIVE_GRAMMAR_POINTS,
+  ];
 
-  public getAll(): GrammarPoint[] {
+  public getByVersionAndLevel(version: 'hsk2' | 'hsk3', level?: number | 'all'): GrammarPoint[] {
+    const list = version === 'hsk3' ? this.hsk3Catalog : this.hsk2Catalog;
+    if (!level || level === 'all') return list;
+    return list.filter((g) => (g.normalizedLevel || g.level) === level);
+  }
+
+  public getAll(version?: 'hsk2' | 'hsk3'): GrammarPoint[] {
+    if (version === 'hsk3') return this.hsk3Catalog;
+    if (version === 'hsk2') return this.hsk2Catalog;
     return this.cache;
   }
 
-  public getByLevel(level: number): GrammarPoint[] {
-    return this.cache.filter((g) => g.level === level);
+  public getByLevel(level: number, version: 'hsk2' | 'hsk3' = 'hsk2'): GrammarPoint[] {
+    return this.getByVersionAndLevel(version, level);
   }
 
   public getById(id: string): GrammarPoint | undefined {
-    return this.cache.find((g) => g.id === id);
+    return (
+      this.hsk3Catalog.find((g) => g.id === id) ||
+      this.hsk2Catalog.find((g) => g.id === id) ||
+      this.cache.find((g) => g.id === id)
+    );
   }
 
-  public search(query: string, level?: number): GrammarPoint[] {
+  public search(query: string, level?: number, version?: 'hsk2' | 'hsk3'): GrammarPoint[] {
     const q = query.toLowerCase().trim();
-    return this.cache.filter((g) => {
-      const matchLevel = level === undefined || level === 0 || g.level === level;
+    const sourceList =
+      version === 'hsk3'
+        ? this.hsk3Catalog
+        : version === 'hsk2'
+        ? this.hsk2Catalog
+        : this.cache;
+
+    return sourceList.filter((g) => {
+      const matchLevel =
+        level === undefined || level === 0 || (g.normalizedLevel || g.level) === level;
       if (!matchLevel) return false;
       if (!q) return true;
       return (
@@ -708,7 +749,13 @@ export class GrammarRepository {
         g.pattern.toLowerCase().includes(q) ||
         g.explanation.toLowerCase().includes(q) ||
         g.category.toLowerCase().includes(q) ||
-        g.examples.some((ex) => ex.hanzi.includes(q) || ex.vietnamese.toLowerCase().includes(q))
+        (g.subCategory && g.subCategory.toLowerCase().includes(q)) ||
+        (g.meaningVi && g.meaningVi.toLowerCase().includes(q)) ||
+        g.examples.some(
+          (ex) =>
+            ex.hanzi.includes(q) ||
+            (ex.vietnamese && ex.vietnamese.toLowerCase().includes(q))
+        )
       );
     });
   }
@@ -744,8 +791,8 @@ export class GrammarRepository {
           notes: d.notes,
           sortOrder: d.sort_order,
         }));
-        this.cache = serverPoints;
-        return serverPoints;
+        this.cache = [...serverPoints, ...this.hsk3Catalog];
+        return this.cache;
       }
     } catch {
       // Offline fallback
@@ -756,3 +803,4 @@ export class GrammarRepository {
 }
 
 export const grammarRepository = new GrammarRepository();
+

@@ -545,6 +545,183 @@ YÊU CẦU ĐẦU RA (JSON DUY NHẤT, KHÔNG CÓ MARKDOWN HOẶC TEXT KHÁC):
       );
     }
 
+    // 6. FREE-QUESTION AI CHAT (UNRESTRICTED CHINESE LEARNING Q&A)
+    if (action === 'free-chat') {
+      const question = (body.question || body.message || '').trim();
+      const history = Array.isArray(body.history) ? body.history : [];
+      const contextItem = body.contextItem || null;
+
+      if (!question) {
+        return new Response(
+          JSON.stringify({ error: 'EMPTY_QUESTION', message: 'Nội dung câu hỏi không được để trống' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+
+      const formattedHistory = history
+        .slice(-8)
+        .map((h: any) => `${h.sender === 'user' ? 'Học viên' : 'Gia sư YUYAN'}: ${h.text || h.message}`)
+        .join('\n');
+
+      let contextPrompt = '';
+      if (contextItem) {
+        contextPrompt = `\nNgữ cảnh học tập kích hoạt:
+- Chủ đề: ${contextItem.domainName || contextItem.domainId || ''}
+- Nhiệm vụ: ${contextItem.task || ''}
+- Mục tiêu: ${contextItem.objective || ''}
+- Cấp độ: ${contextItem.level || ''}`;
+      }
+
+      const prompt = `Bạn là Cố vấn Sư phạm Hán ngữ Cao cấp (Senior AI Chinese Tutor) thuộc nền tảng YUYAN (Khẩu hiệu: "Học tiếng Trung theo cách của bạn.").
+Nhiệm vụ: Trả lời bất kỳ câu hỏi nào của người học tiếng Trung bằng tiếng Việt sư phạm, chu đáo, chuẩn xác và dễ hiểu.
+${contextPrompt}
+
+Lịch sử trò chuyện gần nhất:
+${formattedHistory || '(Chưa có lịch sử)'}
+
+Câu hỏi mới nhất của học viên: "${question}"
+
+YÊU CẦU NỘI DUNG & ĐỊNH DẠNG:
+1. Ngôn ngữ giải thích mặc định: Tiếng Việt sư phạm, rõ ràng, thân thiện.
+2. Mọi câu ví dụ tiếng Trung BẮT BUỘC có đủ 3 thành phần:
+   - Chữ Hán giản thể chuẩn
+   - Phiên âm Pinyin có đầy đủ dấu thanh điệu
+   - Bản dịch tiếng Việt tự nhiên và chuẩn xác
+3. Khả năng hỗ trợ:
+   - Ngữ pháp, mẫu câu, trật tự từ
+   - Phân biệt các cặp từ gần nghĩa / dễ nhầm lẫn
+   - Sửa lỗi câu & lý giải nguyên nhân can thiệp từ tiếng Việt
+   - Luyện dịch song ngữ Trung - Việt
+   - Luyện thi HSK 2.0 & HSK 3.0 (GF0025-2021)
+   - Tiếng Trung chuyên ngành (Thương mại, Công xưởng, IT, Logistics)
+4. Nếu người học hỏi về chủ đề hoàn toàn không liên quan đến tiếng Trung / văn hóa Trung Hoa, hãy lịch sự từ chối và nhắc học viên quay lại chủ đề ngôn ngữ.`;
+
+      const geminiRes = await callGemini(geminiKey, prompt, false);
+      if (!geminiRes.success) {
+        return new Response(
+          JSON.stringify({
+            error: 'GEMINI_ERROR',
+            message: geminiRes.message,
+            status: geminiRes.status,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 502 }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          answer: geminiRes.text,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
+    // 7. CONTEXTUAL AI GRAMMAR ASSISTANT (DETAIL PAGES)
+    if (action === 'grammar-ai') {
+      const mode = body.mode || 'explain_simple'; // 'explain_simple' | 'explain_deep' | 'generate_examples' | 'compare' | 'quiz'
+      const gp = body.grammarPoint || {};
+      const comparePattern = (body.comparePattern || '').trim();
+      const customQuery = (body.customQuery || '').trim();
+
+      const baseInfo = `
+- Điểm ngữ pháp: ${gp.pattern || gp.title || ''}
+- Tên/Tiêu đề: ${gp.title || ''}
+- Cấp độ: ${gp.bandLabel || gp.sourceLevel || `HSK ${gp.level || 1}`}
+- Thể loại: ${gp.category || ''}
+- Công thức: ${gp.structureSummary || gp.positivePattern || gp.pattern || ''}
+- Ý nghĩa: ${gp.meaningVi || gp.explanation || ''}
+`;
+
+      let specificInstructions = '';
+      let isJson = false;
+
+      if (mode === 'explain_simple') {
+        specificInstructions = `Hãy giải thích điểm ngữ pháp này một cách thật đơn giản, dễ hiểu như đang giảng cho người mới bắt đầu học. Dùng hình ảnh so sánh trực quan hoặc liên hệ gần gũi với tiếng Việt. Độ dài 2-3 đoạn ngắn, kèm 2 ví dụ kinh điển.`;
+      } else if (mode === 'explain_deep') {
+        specificInstructions = `Hãy phân tích chuyên sâu về điểm ngữ pháp này:
+1. Quy tắc kết hợp và hạn chế ngữ pháp (điều kiện cần và đủ).
+2. Trật tự từ trong câu và vị trí của các trạng ngữ, bổ ngữ liên quan.
+3. Sự khác biệt tinh tế về ngữ cảm và ngữ dụng học (pragmatics).
+4. Các trường hợp ngoại lệ người học cần lưu ý.`;
+      } else if (mode === 'generate_examples') {
+        isJson = true;
+        specificInstructions = `Hãy tạo 3 câu ví dụ mới hoàn toàn tự nhiên và thực tế cho điểm ngữ pháp này.
+YÊU CẦU ĐẦU RA (JSON DUY NHẤT):
+{
+  "examples": [
+    {
+      "hanzi": "Câu chữ Hán",
+      "pinyin": "Phiên âm Pinyin đầy đủ thanh điệu",
+      "vietnamese": "Bản dịch nghĩa tiếng Việt",
+      "context": "Ngữ cảnh sử dụng (vd: Đời sống, Công sở, Mua sắm)"
+    }
+  ]
+}`;
+      } else if (mode === 'compare') {
+        specificInstructions = `Hãy so sánh điểm ngữ pháp "${gp.pattern || gp.title}" với cấu trúc tương tự "${comparePattern || 'cấu trúc liên quan'}":
+1. Điểm giống nhau về ý nghĩa.
+2. Sự khác biệt cốt lõi về ngữ pháp, vị trí trong câu và điều kiện dùng.
+3. Bảng đối chiếu ví dụ song song (A vs B).
+4. Mẹo ghi nhớ nhanh để không bị nhầm lẫn.`;
+      } else if (mode === 'quiz') {
+        isJson = true;
+        specificInstructions = `Hãy tạo 2 câu hỏi trắc nghiệm thực hành cho điểm ngữ pháp này (4 lựa chọn mỗi câu).
+YÊU CẦU ĐẦU RA (JSON DUY NHẤT):
+{
+  "quizzes": [
+    {
+      "question": "Nội dung câu hỏi (chọn từ điền vào chỗ trống hoặc chọn câu đúng)",
+      "options": ["A", "B", "C", "D"],
+      "correctAnswer": 0,
+      "explanation": "Giải thích chi tiết vì sao đáp án đó đúng và phân tích bẫy ngữ pháp."
+    }
+  ]
+}`;
+      } else if (mode === 'custom_query') {
+        specificInstructions = `Học viên có câu hỏi riêng về điểm ngữ pháp này:
+"${customQuery}"
+Hãy trả lời thấu đáo, chuẩn xác và sư phạm bằng tiếng Việt kèm ví dụ minh họa song ngữ.`;
+      }
+
+      const prompt = `Bạn là Chuyên gia Ngữ pháp Hán ngữ Quốc tế (International Chinese Grammar Specialist) của YUYAN.
+Thông tin điểm ngữ pháp mục tiêu:
+${baseInfo}
+
+Nhiệm vụ:
+${specificInstructions}`;
+
+      const geminiRes = await callGemini(geminiKey, prompt, isJson);
+      if (!geminiRes.success) {
+        return new Response(
+          JSON.stringify({
+            error: 'GEMINI_ERROR',
+            message: geminiRes.message,
+            status: geminiRes.status,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 502 }
+        );
+      }
+
+      let parsedContent: any = geminiRes.text;
+      if (isJson) {
+        try {
+          parsedContent = JSON.parse(geminiRes.text!);
+        } catch {
+          parsedContent = { rawText: geminiRes.text };
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          mode,
+          result: parsedContent,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: 'UNKNOWN_ACTION', message: `Hành động không hợp lệ: ${action}` }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
