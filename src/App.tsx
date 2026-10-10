@@ -26,6 +26,12 @@ import { ThemeProvider } from './context/ThemeContext.tsx';
 import { ToastProvider, useToast } from './components/ui/Toast.tsx';
 import { ErrorBoundary } from './components/ui/ErrorBoundary.tsx';
 import { MandarinVoiceHelpModal } from './components/ui/MandarinVoiceHelpModal.tsx';
+import { YuyanAIProvider } from './context/YuyanAIContext.tsx';
+import { YuyanAIFloatingButton } from './components/ai/YuyanAIFloatingButton.tsx';
+import { YuyanChatPanel } from './components/ai/YuyanChatPanel.tsx';
+import { YuyanVoiceModal } from './components/ai/YuyanVoiceModal.tsx';
+import { YuyanLanguageModal } from './components/ai/YuyanLanguageModal.tsx';
+import { YuyanVoiceSettingsModal } from './components/ai/YuyanVoiceSettingsModal.tsx';
 import { lessonRepository } from './data/hsk/lessonRepository.ts';
 import { BookOpen, AlertCircle } from 'lucide-react';
 
@@ -428,6 +434,13 @@ const AppContent: React.FC = () => {
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav currentTab={route.tab} onSelectTab={handleSelectTab} />
+
+      {/* Global Yuyan AI Floating Assistant & Interactive Modals */}
+      <YuyanAIFloatingButton />
+      <YuyanChatPanel onNavigateToWorkspace={() => navigate({ tab: 'ai' })} />
+      <YuyanVoiceModal />
+      <YuyanLanguageModal />
+      <YuyanVoiceSettingsModal />
     </div>
   );
 };
@@ -437,7 +450,9 @@ export const App: React.FC = () => {
     <ErrorBoundary>
       <ThemeProvider>
         <ToastProvider>
-          <AppContent />
+          <YuyanAIProvider>
+            <AppContent />
+          </YuyanAIProvider>
         </ToastProvider>
       </ThemeProvider>
     </ErrorBoundary>

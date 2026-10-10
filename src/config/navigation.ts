@@ -147,11 +147,11 @@ export const MAIN_NAV_ITEMS: NavItemConfig[] = [
   },
   {
     id: 'ai',
-    label: 'AI hội thoại',
+    label: 'AI Trợ lý',
     shortLabel: 'AI',
     path: '/ai',
     icon: Bot,
-    description: 'Trò chuyện ngữ cảnh và sửa lỗi ngữ pháp với AI',
+    description: 'Gia sư Yuyan AI thông minh, luyện nói và giải đáp tiếng Trung',
   },
   {
     id: 'dictionary',
