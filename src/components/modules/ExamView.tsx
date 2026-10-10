@@ -11,6 +11,8 @@ import {
   Flag,
   FileCheck2,
   History,
+  Bot,
+  Loader2,
 } from 'lucide-react';
 import { useToast } from '../ui/Toast.tsx';
 import {
@@ -20,6 +22,7 @@ import {
   ExamAttemptRecord,
 } from '../../data/repositories/examRepository';
 import { audioManager } from '../../services/audio/audioManager';
+import { aiApiService } from '../../services/ai/aiApiService';
 import { learningProgressService } from '../../services/progress/learningProgressService';
 
 export const ExamView: React.FC = () => {
@@ -28,6 +31,8 @@ export const ExamView: React.FC = () => {
   // Version & Level State
   const [examVersion, setExamVersion] = useState<HskExamVersion>('hsk3');
   const [selectedLevel, setSelectedLevel] = useState<number>(1);
+  const [aiExplainingId, setAiExplainingId] = useState<number | null>(null);
+  const [aiExplanations, setAiExplanations] = useState<Record<number, any>>({});
 
   // Exam Lifecycle State
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
@@ -49,6 +54,32 @@ export const ExamView: React.FC = () => {
   const currentTemplate = useMemo(() => {
     return examRepository.getTemplate(examVersion, selectedLevel);
   }, [examVersion, selectedLevel]);
+
+  const paperMeta = useMemo(() => {
+    return examRepository.getPaperMetadata(examVersion, selectedLevel);
+  }, [examVersion, selectedLevel]);
+
+  const handleAskAiExplanation = async (
+    q: ExamQuestion,
+    userChoice: number | undefined,
+    isCorrect: boolean
+  ) => {
+    if (aiExplainingId === q.id) return;
+    setAiExplainingId(q.id);
+    try {
+      const exp = await aiApiService.explainExamQuestion({
+        question: q,
+        userAnswer: userChoice,
+        isCorrect,
+      });
+      setAiExplanations((prev) => ({ ...prev, [q.id]: exp }));
+      showToast('Gia sư AI đã phân tích xong câu hỏi!', 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Không thể lấy phân tích AI cho câu này', 'warning');
+    } finally {
+      setAiExplainingId(null);
+    }
+  };
 
   // Load questions and check saved session
   useEffect(() => {
@@ -352,6 +383,26 @@ export const ExamView: React.FC = () => {
                 Cấp cao 7–9
               </button>
             )}
+          </div>
+        )}
+
+        {/* Verified Paper Source Metadata Card */}
+        {paperMeta && !isExamStarted && (
+          <div className="p-3.5 rounded-xl bg-surface-secondary/60 border border-border-subtle text-2xs flex flex-wrap items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2">
+              <FileCheck2 className="w-4 h-4 text-status-success shrink-0" />
+              <div>
+                <span className="font-bold text-text-primary mr-1.5">{paperMeta.titleZh}</span>
+                <span className="text-text-secondary">({paperMeta.titleVi})</span>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-text-muted">
+              <span className="px-2 py-0.5 rounded bg-surface border border-border-subtle font-mono text-2xs font-semibold">
+                Mã đề: {paperMeta.sourceId}
+              </span>
+              <span>{paperMeta.syllabusStandard}</span>
+              <span className="text-status-success font-semibold">Đã xác minh đáp án & audio</span>
+            </div>
           </div>
         )}
       </div>
@@ -830,8 +881,59 @@ export const ExamView: React.FC = () => {
 
                     {/* Pedagogical Explanation */}
                     <div className="p-3 rounded-xl bg-surface-secondary/70 border border-border-subtle text-2xs text-text-secondary leading-relaxed">
-                      <strong className="text-text-primary">Lời giải thích: </strong>
+                      <strong className="text-text-primary">Lời giải thích gốc: </strong>
                       {q.explanation}
+                    </div>
+
+                    {/* AI Explanation Action & Result Card */}
+                    <div className="pt-1">
+                      {aiExplanations[q.id] ? (
+                        <div className="p-3.5 rounded-xl bg-primary-soft/40 border border-primary/20 text-2xs space-y-2 animate-in fade-in duration-150">
+                          <div className="flex items-center gap-1.5 font-bold text-primary">
+                            <Bot className="w-3.5 h-3.5" />
+                            <span>Gia sư AI Khảo thí YUYAN (Phân tích bổ trợ):</span>
+                          </div>
+                          <p className="text-text-primary leading-relaxed">
+                            {aiExplanations[q.id].explanation}
+                          </p>
+                          {aiExplanations[q.id].distractorAnalysis && (
+                            <div className="text-text-secondary">
+                              <strong>Phân tích phương án sai: </strong>
+                              {aiExplanations[q.id].distractorAnalysis}
+                            </div>
+                          )}
+                          {aiExplanations[q.id].grammarRule && (
+                            <div className="text-text-secondary">
+                              <strong>Điểm ngữ pháp mấu chốt: </strong>
+                              {aiExplanations[q.id].grammarRule}
+                            </div>
+                          )}
+                          {aiExplanations[q.id].examTip && (
+                            <div className="text-amber-700 dark:text-amber-300 font-medium bg-amber-500/10 p-2 rounded-lg">
+                              <strong>Mẹo làm bài thi: </strong>
+                              {aiExplanations[q.id].examTip}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleAskAiExplanation(q, userChoice, isCorrect)}
+                          disabled={aiExplainingId === q.id}
+                          className="px-3 py-1.5 rounded-xl bg-surface border border-border-subtle hover:border-primary/40 hover:bg-primary-soft text-text-secondary hover:text-primary text-2xs font-semibold transition-all flex items-center gap-1.5 shadow-2xs"
+                        >
+                          {aiExplainingId === q.id ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                              <span>Gia sư AI đang phân tích...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Bot className="w-3 h-3 text-primary" />
+                              <span>Hỏi Gia sư AI phân tích sâu câu này</span>
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 );

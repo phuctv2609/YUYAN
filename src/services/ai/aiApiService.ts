@@ -64,8 +64,10 @@ class AiApiService {
   /**
    * Helper to invoke the Supabase Edge Function with fallback to local proxy
    */
-  private async invokeEdgeFunction(body: any): Promise<any> {
+  private async invokeEdgeFunction(body: any, timeoutMs: number = 30000): Promise<any> {
     const supabase = getSupabaseClient();
+    let lastErrorMsg: string | null = null;
+    let lastErrorCode: string | null = null;
 
     // 1. Try supabase.functions.invoke first
     if (supabase) {
@@ -74,19 +76,37 @@ class AiApiService {
           body,
         });
         if (!error && data) {
+          if (data.error && !data.success) {
+            const err = new Error(data.message || 'Lỗi xử lý từ máy chủ AI');
+            (err as any).code = data.error;
+            throw err;
+          }
           return data;
         }
-        if (error && (error as any).status !== 404) {
-          // If the function returned an application error
-          console.warn('Edge Function returned error:', error);
+        if (error) {
+          lastErrorMsg = error.message;
+          // In Supabase JS, error.context can be a Response
+          if ((error as any).context && typeof (error as any).context.json === 'function') {
+            try {
+              const errBody = await (error as any).context.json();
+              if (errBody?.message) lastErrorMsg = errBody.message;
+              if (errBody?.error) lastErrorCode = errBody.error;
+            } catch {
+              // ignore
+            }
+          }
         }
-      } catch (invokeErr) {
-        console.warn('supabase.functions.invoke failed, attempting direct fetch:', invokeErr);
+      } catch (invokeErr: any) {
+        if (invokeErr.code) throw invokeErr;
+        lastErrorMsg = invokeErr?.message || lastErrorMsg;
       }
     }
 
-    // 2. Direct fetch to Edge Function URL
+    // 2. Direct fetch to Edge Function URL with AbortController timeout
     if (this.edgeFunctionUrl && this.anonKey) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
       try {
         const res = await fetch(this.edgeFunctionUrl, {
           method: 'POST',
@@ -96,37 +116,87 @@ class AiApiService {
             Authorization: `Bearer ${this.anonKey}`,
           },
           body: JSON.stringify(body),
+          signal: controller.signal,
         });
-        if (res.ok) {
-          return await res.json();
+
+        clearTimeout(timeoutId);
+
+        const resData = await res.json().catch(() => null);
+
+        if (res.ok && resData) {
+          if (resData.error && !resData.success) {
+            const err = new Error(resData.message || 'Lỗi xử lý từ máy chủ AI');
+            (err as any).code = resData.error;
+            throw err;
+          }
+          return resData;
         }
-      } catch (fetchErr) {
-        console.warn('Direct Edge Function fetch failed:', fetchErr);
+
+        if (resData?.message) {
+          lastErrorMsg = resData.message;
+          lastErrorCode = resData.error || `HTTP_${res.status}`;
+        } else {
+          lastErrorMsg = `Máy chủ AI trả về mã lỗi HTTP ${res.status}`;
+          lastErrorCode = `HTTP_${res.status}`;
+        }
+      } catch (fetchErr: any) {
+        clearTimeout(timeoutId);
+        if (fetchErr.name === 'AbortError') {
+          lastErrorMsg = 'Yêu cầu kết nối AI quá thời gian phản hồi (timeout 30s). Vui lòng thử lại.';
+          lastErrorCode = 'TIMEOUT';
+        } else if (fetchErr.code) {
+          throw fetchErr;
+        } else {
+          lastErrorMsg = fetchErr?.message || lastErrorMsg;
+        }
       }
     }
 
     // 3. Fallback to local Vite server proxy (/api/ai/word-usage) if available
     if (body.action === 'word-usage') {
-      const localRes = await fetch('/api/ai/word-usage', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          word: body.headword,
-          pinyin: body.pinyin,
-          meanings: body.meanings_vi,
-          hskLevel: body.hsk_level,
-          pos: body.pos ? [body.pos] : [],
-        }),
-      });
-      if (localRes.ok) {
-        const data = await localRes.json();
-        if (data.explanation) {
-          return { success: true, explanation: data.explanation, cached: data.cached };
+      try {
+        const localRes = await fetch('/api/ai/word-usage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            word: body.headword,
+            pinyin: body.pinyin,
+            meanings: body.meanings_vi,
+            hskLevel: body.hsk_level,
+            pos: body.pos ? [body.pos] : [],
+          }),
+        });
+        if (localRes.ok) {
+          const data = await localRes.json();
+          if (data.explanation) {
+            return { success: true, explanation: data.explanation, cached: data.cached };
+          }
         }
+      } catch {
+        // ignore
       }
     }
 
-    throw new Error('Không thể kết nối tới dịch vụ AI Gemini trên server.');
+    // Standardized Error Mapping
+    if (lastErrorCode === 'AI_UNCONFIGURED' || lastErrorMsg?.includes('GEMINI_API_KEY')) {
+      lastErrorMsg = 'Tính năng AI chưa được kích hoạt: Chưa cấu hình GEMINI_API_KEY trong Supabase Secrets.';
+      lastErrorCode = 'AI_UNCONFIGURED';
+    } else if (
+      lastErrorCode === 'RATE_LIMIT_EXCEEDED' ||
+      lastErrorMsg?.includes('RESOURCE_EXHAUSTED') ||
+      lastErrorMsg?.includes('429')
+    ) {
+      lastErrorMsg = 'Đã đạt giới hạn yêu cầu API Gemini. Vui lòng đợi trong giây lát và thử lại.';
+      lastErrorCode = 'RATE_LIMIT_EXCEEDED';
+    } else if (lastErrorCode === 'TIMEOUT') {
+      lastErrorMsg = 'Yêu cầu kết nối AI quá thời gian phản hồi (timeout 30s). Vui lòng thử lại.';
+    }
+
+    const finalErr = new Error(
+      lastErrorMsg || 'Không thể kết nối tới dịch vụ AI Gemini trên máy chủ.'
+    );
+    if (lastErrorCode) (finalErr as any).code = lastErrorCode;
+    throw finalErr;
   }
 
   /**
@@ -279,37 +349,69 @@ class AiApiService {
     transcript?: string;
     level?: number;
   }): Promise<PronunciationEvaluation> {
-    try {
-      const data = await this.invokeEdgeFunction({
-        action: 'evaluate-pronunciation',
-        targetHanzi: params.targetHanzi,
-        targetPinyin: params.targetPinyin,
-        audioBase64: params.audioBase64,
-        audioMimeType: params.audioMimeType,
-        transcript: params.transcript,
-        level: params.level,
-      });
+    const data = await this.invokeEdgeFunction({
+      action: 'evaluate-pronunciation',
+      targetHanzi: params.targetHanzi,
+      targetPinyin: params.targetPinyin,
+      audioBase64: params.audioBase64,
+      audioMimeType: params.audioMimeType,
+      transcript: params.transcript,
+      level: params.level,
+    });
 
-      if (data?.evaluation) {
-        return data.evaluation;
-      }
-    } catch (err) {
-      console.warn('Edge function pronunciation evaluation fallback:', err);
+    if (!data?.success && data?.error) {
+      const err = new Error(data.message || 'Lỗi khi chấm điểm phát âm qua AI');
+      (err as any).code = data.error;
+      throw err;
     }
 
-    // High-fidelity fallback evaluation based on phonetic rules
-    return {
-      score: 86,
-      accuracy: 'Tốt',
-      toneAccuracy: 'Chuẩn xác',
-      pinyinDetected: params.targetPinyin,
-      correctParts: ['Thanh mẫu chuẩn', 'Vận mẫu tròn vành'],
-      mainMistake: 'Cần duy trì độ dài thanh điệu tự nhiên hơn ở cuối câu',
-      affectedSyllable: params.targetPinyin.split(' ')[0] || params.targetPinyin,
-      targetComparison: `Mục tiêu: ${params.targetPinyin}`,
-      recommendation: 'Giữ luồng hơi đều và mở rộng vòm họng khi phát âm.',
-      drillPrompt: `Luyện đọc lại ${params.targetPinyin} 3 lần`,
-    };
+    if (!data?.evaluation) {
+      throw new Error('Dịch vụ AI không trả về kết quả đánh giá phát âm.');
+    }
+
+    return data.evaluation;
+  }
+
+  /**
+   * AI Sentence Syntax & Grammar Analysis
+   */
+  async analyzeSentence(sentence: string): Promise<any> {
+    const data = await this.invokeEdgeFunction({
+      action: 'sentence-analysis',
+      sentence,
+    });
+
+    if (!data?.success && data?.error) {
+      const err = new Error(data.message || 'Lỗi khi phân tích cấu trúc câu');
+      (err as any).code = data.error;
+      throw err;
+    }
+
+    return data.analysis;
+  }
+
+  /**
+   * HSK Exam Question Explanation
+   */
+  async explainExamQuestion(params: {
+    question: any;
+    userAnswer?: number;
+    isCorrect?: boolean;
+  }): Promise<any> {
+    const data = await this.invokeEdgeFunction({
+      action: 'exam-explanation',
+      question: params.question,
+      userAnswer: params.userAnswer,
+      isCorrect: params.isCorrect,
+    });
+
+    if (!data?.success && data?.error) {
+      const err = new Error(data.message || 'Lỗi khi giải thích câu hỏi bài thi');
+      (err as any).code = data.error;
+      throw err;
+    }
+
+    return data.explanation;
   }
 
   /**

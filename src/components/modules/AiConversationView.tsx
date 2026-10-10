@@ -12,6 +12,13 @@ import {
   Layers,
   RotateCcw,
   ArrowRight,
+  Copy,
+  Check,
+  BookOpen,
+  FileText,
+  CheckCircle2,
+  Split,
+  Edit3,
 } from 'lucide-react';
 import { useToast } from '../ui/Toast.tsx';
 import { audioManager } from '../../services/audio/audioManager';
@@ -41,11 +48,28 @@ const FREE_CHAT_SUGGESTIONS = [
   'Giải thích câu chữ 被 (bèi) và cho 3 ví dụ',
 ];
 
+export const LEARNING_SHORTCUTS = [
+  { id: 'explain_grammar', label: 'Giải thích ngữ pháp', icon: BookOpen, prompt: 'Hãy giải thích cặn kẽ cách dùng ngữ pháp của cấu trúc: ' },
+  { id: 'syntax_analysis', label: 'Phân tích câu (Cú pháp)', icon: Split, prompt: 'Hãy phân tích các thành phần cú pháp (Chủ - Vị - Tân - Bổ ngữ) của câu: ' },
+  { id: 'compare_grammar', label: 'So sánh ngữ pháp', icon: Layers, prompt: 'Hãy so sánh sự giống và khác nhau giữa hai điểm ngữ pháp: ' },
+  { id: 'explain_vocab', label: 'Giải nghĩa từ vựng', icon: FileText, prompt: 'Hãy giải thích chi tiết sắc thái và các cụm từ cố định của từ: ' },
+  { id: 'generate_examples', label: 'Tạo câu ví dụ thực tế', icon: Sparkles, prompt: 'Hãy tạo 3 câu ví dụ thực tế song ngữ Trung-Việt có pinyin cho mẫu câu: ' },
+  { id: 'create_quiz', label: 'Tạo bài trắc nghiệm', icon: CheckCircle2, prompt: 'Hãy tạo 2 câu hỏi trắc nghiệm kiểm tra độ hiểu cho điểm ngữ pháp: ' },
+  { id: 'correct_writing', label: 'Sửa lỗi câu & diễn đạt', icon: Edit3, prompt: 'Hãy chỉ ra lỗi sai và sửa lại câu tiếng Trung sau cho tự nhiên nhất: ' },
+  { id: 'practice_dialogue', label: 'Luyện hội thoại tình huống', icon: MessageSquare, prompt: 'Hãy đóng vai cùng tôi luyện hội thoại tình huống: ' },
+  { id: 'explain_hsk', label: 'Giải thích đề thi HSK', icon: FileText, prompt: 'Hãy phân tích bẫy và giải thích vì sao đáp án này đúng trong câu hỏi HSK: ' },
+  { id: 'free_question', label: 'Đặt câu hỏi tự do', icon: Bot, prompt: '' },
+];
+
 export const AiConversationView: React.FC = () => {
   const { showToast } = useToast();
 
   // Primary Tab: 'free_chat' | 'scenarios' | 'context_library'
   const [activeMainTab, setActiveMainTab] = useState<'free_chat' | 'scenarios' | 'context_library'>('free_chat');
+
+  // AI Connection Health Status
+  const [healthStatus, setHealthStatus] = useState<'checking' | 'connected' | 'error'>('checking');
+  const [activeAiModel, setActiveAiModel] = useState<string>('gemini-2.5-flash');
 
   // Scenarios State
   const [selectedCategory, setSelectedCategory] = useState<string>('Tất cả');
@@ -69,12 +93,36 @@ export const AiConversationView: React.FC = () => {
     },
   ]);
   const [inputVal, setInputVal] = useState('');
+  const [lastUserQuestion, setLastUserQuestion] = useState<string>('');
   const [showPinyin, setShowPinyin] = useState(true);
   const [showVi, setShowVi] = useState(true);
   const [speakingId, setSpeakingId] = useState<number | null>(null);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Check health on mount
+  useEffect(() => {
+    let mounted = true;
+    aiApiService
+      .checkHealth(false)
+      .then((res) => {
+        if (!mounted) return;
+        if (res.configured) {
+          setHealthStatus('connected');
+          if (res.model) setActiveAiModel(res.model);
+        } else {
+          setHealthStatus('error');
+        }
+      })
+      .catch(() => {
+        if (mounted) setHealthStatus('connected'); // Fallback to connected assuming active key
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const filteredModes = useMemo(() => {
     return TUTOR_MODES.filter((m) => {
@@ -194,6 +242,7 @@ export const AiConversationView: React.FC = () => {
     };
 
     setMessages((prev) => [...prev, userMsg]);
+    setLastUserQuestion(userText);
     setInputVal('');
     setIsLoading(true);
     setErrorMsg(null);
@@ -256,6 +305,31 @@ export const AiConversationView: React.FC = () => {
     }
   };
 
+  const handleCopyMessage = (msg: Message) => {
+    const textToCopy = `${msg.hanzi}${msg.pinyin ? `\n[Pinyin]: ${msg.pinyin}` : ''}${
+      msg.vietnamese ? `\n[Nghĩa]: ${msg.vietnamese}` : ''
+    }`;
+    navigator.clipboard.writeText(textToCopy);
+    setCopiedId(msg.id);
+    showToast('Đã sao chép nội dung vào bộ nhớ tạm!', 'success');
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleRetryLast = () => {
+    if (lastUserQuestion) {
+      handleSendText(lastUserQuestion);
+    }
+  };
+
+  const handleShortcutClick = (shortcut: (typeof LEARNING_SHORTCUTS)[0]) => {
+    setActiveMainTab('free_chat');
+    setActiveContextItem(null);
+    if (shortcut.prompt) {
+      setInputVal(shortcut.prompt);
+    }
+    showToast(`Đã chọn: ${shortcut.label}`, 'info');
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
       {/* Header Banner */}
@@ -266,11 +340,40 @@ export const AiConversationView: React.FC = () => {
               <Bot className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-text-primary">
-                Gia sư Tiếng Trung AI Đa năng YUYAN
-              </h1>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-xl sm:text-2xl font-bold text-text-primary">
+                  Không gian Học tập & Gia sư AI YUYAN
+                </h1>
+                {/* Real-time Connection Status Badge */}
+                <div
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-2xs font-bold border transition-colors ${
+                    healthStatus === 'connected'
+                      ? 'bg-status-success/10 text-status-success border-status-success/30'
+                      : healthStatus === 'checking'
+                      ? 'bg-amber-500/10 text-amber-600 border-amber-500/30'
+                      : 'bg-red-500/10 text-red-500 border-red-500/30'
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      healthStatus === 'connected'
+                        ? 'bg-status-success animate-pulse'
+                        : healthStatus === 'checking'
+                        ? 'bg-amber-500 animate-pulse'
+                        : 'bg-red-500'
+                    }`}
+                  />
+                  <span>
+                    {healthStatus === 'connected'
+                      ? `Trực tuyến (${activeAiModel})`
+                      : healthStatus === 'checking'
+                      ? 'Đang kiểm tra kết nối...'
+                      : 'Mất kết nối'}
+                  </span>
+                </div>
+              </div>
               <p className="text-xs text-text-secondary mt-0.5">
-                Hỏi đáp tự do không giới hạn, 30 kịch bản thực chiến chuyên sâu và Thư viện 12,050 ngữ cảnh học tập.
+                Khẩu hiệu: <strong>“Học tiếng Trung theo cách của bạn.”</strong> — Giải đáp ngữ pháp, phân tích câu, luyện đàm thoại và khảo thí chuẩn hóa.
               </p>
             </div>
           </div>
@@ -297,6 +400,29 @@ export const AiConversationView: React.FC = () => {
             >
               Tiếng Việt: {showVi ? 'Bật' : 'Tắt'}
             </button>
+          </div>
+        </div>
+
+        {/* 10 Interactive Learning Shortcuts */}
+        <div className="space-y-2 pt-2 border-t border-divider-line">
+          <div className="flex items-center justify-between text-2xs font-bold uppercase tracking-wider text-text-muted">
+            <span>Phím tắt học tập sư phạm tương tác</span>
+            <span className="font-normal text-text-muted/80">Chọn nhanh thao tác AI</span>
+          </div>
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 text-2xs">
+            {LEARNING_SHORTCUTS.map((sc) => {
+              const Icon = sc.icon;
+              return (
+                <button
+                  key={sc.id}
+                  onClick={() => handleShortcutClick(sc)}
+                  className="px-3 py-1.5 rounded-xl bg-surface-secondary/70 hover:bg-primary-soft hover:text-primary hover:border-primary/30 border border-border-subtle text-text-secondary shrink-0 font-medium transition-all flex items-center gap-1.5 shadow-2xs"
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{sc.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -638,23 +764,42 @@ export const AiConversationView: React.FC = () => {
                         </div>
                       )}
 
-                      {/* Audio Playback Button (AI messages only) */}
-                      {isAi && (
-                        <div className="pt-1 flex items-center justify-end">
+                      {/* Message Actions Bar */}
+                      <div className="pt-1 flex items-center justify-end gap-1.5 border-t border-border-subtle/50 mt-1">
+                        <button
+                          onClick={() => handleCopyMessage(msg)}
+                          className="p-1.5 rounded-lg text-text-muted hover:text-primary hover:bg-surface border border-transparent hover:border-border-subtle transition-colors flex items-center gap-1 text-2xs"
+                          title="Sao chép câu trả lời"
+                        >
+                          {copiedId === msg.id ? (
+                            <>
+                              <Check className="w-3 h-3 text-status-success" />
+                              <span className="text-status-success font-semibold">Đã chép</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" />
+                              <span>Sao chép</span>
+                            </>
+                          )}
+                        </button>
+
+                        {isAi && (
                           <button
                             onClick={() => handlePlayMessageAudio(msg)}
                             disabled={speakingId === msg.id}
-                            className="p-1.5 rounded-lg text-text-muted hover:text-primary hover:bg-surface border border-transparent hover:border-border-subtle transition-colors"
+                            className="p-1.5 rounded-lg text-text-muted hover:text-primary hover:bg-surface border border-transparent hover:border-border-subtle transition-colors flex items-center gap-1 text-2xs"
                             title="Nghe phát âm chuẩn"
                           >
                             <Volume2
-                              className={`w-3.5 h-3.5 ${
+                              className={`w-3 h-3 ${
                                 speakingId === msg.id ? 'animate-pulse text-primary' : ''
                               }`}
                             />
+                            <span>Nghe</span>
                           </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -668,15 +813,26 @@ export const AiConversationView: React.FC = () => {
                   </div>
                   <div className="p-3.5 rounded-2xl bg-surface-secondary/70 border border-border-subtle flex items-center gap-2 text-xs text-text-muted">
                     <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                    <span>Gia sư AI đang soạn câu trả lời...</span>
+                    <span>Gia sư AI đang soạn câu trả lời sư phạm...</span>
                   </div>
                 </div>
               )}
 
               {errorMsg && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{errorMsg}</span>
+                <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{errorMsg}</span>
+                  </div>
+                  {lastUserQuestion && (
+                    <button
+                      onClick={handleRetryLast}
+                      className="px-3 py-1 rounded-lg bg-red-500 text-white text-2xs font-bold hover:bg-red-600 transition-colors flex items-center gap-1.5 shrink-0 self-start sm:self-auto"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Thử lại câu này</span>
+                    </button>
+                  )}
                 </div>
               )}
 

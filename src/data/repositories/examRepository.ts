@@ -5,6 +5,12 @@
  */
 
 import { getSupabaseClient, getLearnerSessionId } from '../../services/supabase/client';
+import {
+  OFFICIAL_EXAM_PAPERS,
+  OFFICIAL_EXAM_SOURCES,
+  getExamCoverageSummary,
+  ExamPaperMetadata,
+} from '../exam/examPapersInventory';
 
 export type HskExamVersion = 'hsk2' | 'hsk3';
 export type ExamSectionId = 'listening' | 'reading' | 'writing';
@@ -529,6 +535,18 @@ export class ExamRepository {
     return versionTemplates[level] || versionTemplates[1];
   }
 
+  public getPaperMetadata(version: HskExamVersion, level: number): ExamPaperMetadata | undefined {
+    return OFFICIAL_EXAM_PAPERS.find((p) => p.hskVersion === version && p.level === level);
+  }
+
+  public getAllPapers(): ExamPaperMetadata[] {
+    return OFFICIAL_EXAM_PAPERS;
+  }
+
+  public getCoverageSummary() {
+    return getExamCoverageSummary();
+  }
+
   public async getQuestions(version: HskExamVersion, level: number): Promise<ExamQuestion[]> {
     const supabase = getSupabaseClient();
     if (supabase) {
@@ -707,3 +725,5 @@ export class ExamRepository {
 }
 
 export const examRepository = ExamRepository.getInstance();
+export { OFFICIAL_EXAM_PAPERS, OFFICIAL_EXAM_SOURCES, getExamCoverageSummary };
+export type { ExamPaperMetadata };

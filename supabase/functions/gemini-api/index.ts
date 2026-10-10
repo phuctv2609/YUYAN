@@ -14,14 +14,14 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
 
-const DEFAULT_MODEL = 'gemini-3.8-flash';
+const DEFAULT_MODEL = 'gemini-2.5-flash';
 const CANDIDATE_MODELS = [
-  'gemini-3.8-flash',
-  'gemini-3.7-flash',
-  'gemini-3.5-flash',
+  'gemini-2.5-flash',
   'gemini-flash-latest',
-  'gemini-3.1-flash-lite',
   'gemini-2.5-flash-lite',
+  'gemini-flash-lite-latest',
+  'gemini-2.5-pro',
+  'gemini-pro-latest',
 ];
 
 // Helper: Call Gemini API securely server-side (supports text or multimodal parts)
@@ -57,6 +57,7 @@ async function callGemini(apiKey: string, prompt: string | Array<any>, isJson: b
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(18000),
       });
 
       if (!response.ok) {
@@ -717,6 +718,122 @@ ${specificInstructions}`;
           success: true,
           mode,
           result: parsedContent,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
+    // 8. HSK EXAM QUESTION EXPLANATION
+    if (action === 'exam-explanation') {
+      const question = body.question || {};
+      const userAnswer = body.userAnswer;
+      const isCorrect = body.isCorrect;
+
+      const prompt = `Bạn là Chuyên gia Khảo thí và Giảng viên Luyện thi HSK Quốc tế của YUYAN.
+Nhiệm vụ: Giải thích chi tiết câu hỏi thi HSK sau đây cho học viên:
+- Nội dung câu hỏi: "${question.question || question.title || ''}"
+- Các phương án lựa chọn: ${JSON.stringify(question.options || [])}
+- Đáp án chính xác được xác minh: "${question.options?.[question.correctAnswer] || question.correctAnswer}"
+- Câu trả lời của học viên: "${userAnswer !== undefined ? (question.options?.[userAnswer] || userAnswer) : 'Chưa chọn'}"
+- Kết quả làm bài: ${isCorrect ? 'ĐÚNG' : 'CHƯA ĐÚNG'}
+- Cấp độ bài thi: ${question.hskLevel || 'HSK'}
+- Kỹ năng: ${question.section || 'Đọc / Nghe / Viết'}
+
+YÊU CẦU ĐẦU RA (JSON DUY NHẤT):
+{
+  "explanation": "Giải thích sư phạm cặn kẽ tại sao đáp án chính xác là đúng, dịch nghĩa các câu then chốt.",
+  "distractorAnalysis": "Phân tích vì sao các phương án còn lại là bẫy hoặc không chính xác.",
+  "keyVocabulary": ["Từ vựng/cụm từ quan trọng 1 kèm pinyin và nghĩa", "Từ vựng/cụm từ 2"],
+  "grammarRule": "Quy tắc ngữ pháp hoặc cấu trúc câu cốt lõi được kiểm tra trong câu này.",
+  "examTip": "Mẹo làm bài thi nhanh và chính xác cho dạng câu hỏi này."
+}`;
+
+      const geminiRes = await callGemini(geminiKey, prompt, true);
+      if (!geminiRes.success) {
+        return new Response(
+          JSON.stringify({
+            error: 'GEMINI_ERROR',
+            message: geminiRes.message,
+            status: geminiRes.status,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 502 }
+        );
+      }
+
+      let parsedExp: any;
+      try {
+        parsedExp = JSON.parse(geminiRes.text!);
+      } catch {
+        parsedExp = {
+          explanation: geminiRes.text,
+          distractorAnalysis: '',
+          keyVocabulary: [],
+          grammarRule: '',
+          examTip: '',
+        };
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          explanation: parsedExp,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
+    // 9. SENTENCE STRUCTURE & SYNTAX ANALYSIS
+    if (action === 'sentence-analysis') {
+      const sentence = (body.sentence || '').trim();
+      if (!sentence) {
+        return new Response(
+          JSON.stringify({ error: 'EMPTY_SENTENCE', message: 'Thiếu câu cần phân tích' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+
+      const prompt = `Bạn là Chuyên gia Ngữ pháp và Cú pháp học Hán ngữ của YUYAN.
+Hãy phân tích thành phần cú pháp câu tiếng Trung sau:
+"${sentence}"
+
+YÊU CẦU ĐẦU RA (JSON DUY NHẤT):
+{
+  "sentence": "${sentence}",
+  "pinyin": "Pinyin đầy đủ dấu của câu",
+  "vietnamese": "Dịch nghĩa tiếng Việt tự nhiên",
+  "components": [
+    { "part": "Chủ ngữ (主语)", "chinese": "...", "pinyin": "...", "explanation": "..." },
+    { "part": "Vị ngữ (谓语)", "chinese": "...", "pinyin": "...", "explanation": "..." },
+    { "part": "Tân ngữ (宾语)", "chinese": "...", "pinyin": "...", "explanation": "..." },
+    { "part": "Trạng ngữ/Bổ ngữ (状语/补语)", "chinese": "...", "pinyin": "...", "explanation": "..." }
+  ],
+  "grammarNotes": "Phân tích điểm ngữ pháp mấu chốt trong câu.",
+  "pedagogicalAdvice": "Lời khuyên ghi nhớ cho người học Việt Nam."
+}`;
+
+      const geminiRes = await callGemini(geminiKey, prompt, true);
+      if (!geminiRes.success) {
+        return new Response(
+          JSON.stringify({
+            error: 'GEMINI_ERROR',
+            message: geminiRes.message,
+            status: geminiRes.status,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 502 }
+        );
+      }
+
+      let parsedAnalysis: any;
+      try {
+        parsedAnalysis = JSON.parse(geminiRes.text!);
+      } catch {
+        parsedAnalysis = { raw: geminiRes.text };
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          analysis: parsedAnalysis,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );

@@ -1,0 +1,442 @@
+/**
+ * YUYAN — Independent HSK Examination Source Inventory & Paper Coverage Catalog
+ * Strictly separated from ordinary lesson content.
+ * Tracks official syllabus sources, revisions, licensing, and verification status.
+ */
+
+export interface ExamPaperMetadata {
+  paperId: string;
+  hskVersion: 'hsk2' | 'hsk3';
+  level: number;
+  sourceId: string;
+  titleZh: string;
+  titleVi: string;
+  syllabusStandard: string;
+  sourceUrl: string;
+  sourceRevision: string;
+  license: 'official_public_syllabus' | 'educational_fair_use' | 'yuyan_authorized';
+  classification: 'official_sample' | 'authorized_mock' | 'yuyan_standard_mock';
+  verificationStatus: 'verified' | 'provisional';
+  durationMinutes: number;
+  totalQuestions: number;
+  maxScore: number;
+  passingScore: number;
+  hasVerifiedAnswerKey: boolean;
+  hasListeningAudio: boolean;
+  hasTranscript: boolean;
+  sections: Array<{
+    id: 'listening' | 'reading' | 'writing';
+    title: string;
+    questionCount: number;
+    durationMinutes: number;
+    maxScore: number;
+  }>;
+}
+
+export interface ExamCoverageSummary {
+  totalPapers: number;
+  verifiedPapers: number;
+  papersWithVerifiedAnswers: number;
+  papersWithListeningAudio: number;
+  hsk2Count: number;
+  hsk3Count: number;
+  versionBreakdown: {
+    hsk2: Record<number, number>;
+    hsk3: Record<number, number>;
+  };
+  sourcesCited: string[];
+}
+
+export const OFFICIAL_EXAM_SOURCES = [
+  {
+    name: 'Chinese Testing International — Official Syllabus Portal',
+    url: 'https://www.chinesetest.cn/syllabus',
+    type: 'Syllabus & Standard Outlines',
+    license: 'Public Educational Reference',
+  },
+  {
+    name: 'Chinese Testing International — Official Download Portal',
+    url: 'https://admin.chinesetest.cn/godownload.do',
+    type: 'Sample Examination Papers & Audio',
+    license: 'Official Sample Downloads',
+  },
+  {
+    name: 'Chinese Testing International — Official Mock Examination Portal',
+    url: 'https://admin.chinesetest.cn/gosimexam.do',
+    type: 'Computer-based Mock Exams',
+    license: 'Interactive Online Simulation',
+  },
+  {
+    name: 'National Language Commission — Standard GF0025-2021',
+    url: 'http://www.moe.gov.cn/jyb_sjzl/ziliao/A19/202103/t20210331_523674.html',
+    type: 'Chinese Proficiency Grading Standards for International Chinese Language Education',
+    license: 'National Public Standard (GF0025-2021)',
+  },
+];
+
+export const OFFICIAL_EXAM_PAPERS: ExamPaperMetadata[] = [
+  // HSK 2.0 (Hanban 2015 Standard) — Levels 1 to 6
+  {
+    paperId: 'paper_hsk2_l1_sample01',
+    hskVersion: 'hsk2',
+    level: 1,
+    sourceId: 'CT-2015-H11003',
+    titleZh: '新汉语水平考试 HSK（一级）样卷 H11003',
+    titleVi: 'Đề thi Mẫu Chuẩn HSK 2.0 Cấp 1 (Mã H11003)',
+    syllabusStandard: 'Hanban 2015 HSK 2.0 Standard Course',
+    sourceUrl: 'https://admin.chinesetest.cn/godownload.do',
+    sourceRevision: 'Hanban 2015 Edition',
+    license: 'official_public_syllabus',
+    classification: 'official_sample',
+    verificationStatus: 'verified',
+    durationMinutes: 40,
+    totalQuestions: 40,
+    maxScore: 200,
+    passingScore: 120,
+    hasVerifiedAnswerKey: true,
+    hasListeningAudio: true,
+    hasTranscript: true,
+    sections: [
+      { id: 'listening', title: 'Phần Nghe (听力)', questionCount: 20, durationMinutes: 15, maxScore: 100 },
+      { id: 'reading', title: 'Phần Đọc (阅读)', questionCount: 20, durationMinutes: 17, maxScore: 100 },
+    ],
+  },
+  {
+    paperId: 'paper_hsk2_l2_sample01',
+    hskVersion: 'hsk2',
+    level: 2,
+    sourceId: 'CT-2015-H21004',
+    titleZh: '新汉语水平考试 HSK（二级）样卷 H21004',
+    titleVi: 'Đề thi Mẫu Chuẩn HSK 2.0 Cấp 2 (Mã H21004)',
+    syllabusStandard: 'Hanban 2015 HSK 2.0 Standard Course',
+    sourceUrl: 'https://admin.chinesetest.cn/godownload.do',
+    sourceRevision: 'Hanban 2015 Edition',
+    license: 'official_public_syllabus',
+    classification: 'official_sample',
+    verificationStatus: 'verified',
+    durationMinutes: 55,
+    totalQuestions: 60,
+    maxScore: 200,
+    passingScore: 120,
+    hasVerifiedAnswerKey: true,
+    hasListeningAudio: true,
+    hasTranscript: true,
+    sections: [
+      { id: 'listening', title: 'Phần Nghe (听力)', questionCount: 35, durationMinutes: 25, maxScore: 100 },
+      { id: 'reading', title: 'Phần Đọc (阅读)', questionCount: 25, durationMinutes: 22, maxScore: 100 },
+    ],
+  },
+  {
+    paperId: 'paper_hsk2_l3_sample01',
+    hskVersion: 'hsk2',
+    level: 3,
+    sourceId: 'CT-2015-H31001',
+    titleZh: '新汉语水平考试 HSK（三级）样卷 H31001',
+    titleVi: 'Đề thi Mẫu Chuẩn HSK 2.0 Cấp 3 (Mã H31001)',
+    syllabusStandard: 'Hanban 2015 HSK 2.0 Standard Course',
+    sourceUrl: 'https://admin.chinesetest.cn/godownload.do',
+    sourceRevision: 'Hanban 2015 Edition',
+    license: 'official_public_syllabus',
+    classification: 'official_sample',
+    verificationStatus: 'verified',
+    durationMinutes: 90,
+    totalQuestions: 80,
+    maxScore: 300,
+    passingScore: 180,
+    hasVerifiedAnswerKey: true,
+    hasListeningAudio: true,
+    hasTranscript: true,
+    sections: [
+      { id: 'listening', title: 'Phần Nghe (听力)', questionCount: 40, durationMinutes: 35, maxScore: 100 },
+      { id: 'reading', title: 'Phần Đọc (阅读)', questionCount: 30, durationMinutes: 30, maxScore: 100 },
+      { id: 'writing', title: 'Phần Viết (书写)', questionCount: 10, durationMinutes: 15, maxScore: 100 },
+    ],
+  },
+  {
+    paperId: 'paper_hsk2_l4_sample01',
+    hskVersion: 'hsk2',
+    level: 4,
+    sourceId: 'CT-2015-H41002',
+    titleZh: '新汉语水平考试 HSK（四级）样卷 H41002',
+    titleVi: 'Đề thi Mẫu Chuẩn HSK 2.0 Cấp 4 (Mã H41002)',
+    syllabusStandard: 'Hanban 2015 HSK 2.0 Standard Course',
+    sourceUrl: 'https://admin.chinesetest.cn/godownload.do',
+    sourceRevision: 'Hanban 2015 Edition',
+    license: 'official_public_syllabus',
+    classification: 'official_sample',
+    verificationStatus: 'verified',
+    durationMinutes: 105,
+    totalQuestions: 100,
+    maxScore: 300,
+    passingScore: 180,
+    hasVerifiedAnswerKey: true,
+    hasListeningAudio: true,
+    hasTranscript: true,
+    sections: [
+      { id: 'listening', title: 'Phần Nghe (听力)', questionCount: 45, durationMinutes: 30, maxScore: 100 },
+      { id: 'reading', title: 'Phần Đọc (阅读)', questionCount: 40, durationMinutes: 40, maxScore: 100 },
+      { id: 'writing', title: 'Phần Viết (书写)', questionCount: 15, durationMinutes: 25, maxScore: 100 },
+    ],
+  },
+  {
+    paperId: 'paper_hsk2_l5_sample01',
+    hskVersion: 'hsk2',
+    level: 5,
+    sourceId: 'CT-2015-H51001',
+    titleZh: '新汉语水平考试 HSK（五级）样卷 H51001',
+    titleVi: 'Đề thi Mẫu Chuẩn HSK 2.0 Cấp 5 (Mã H51001)',
+    syllabusStandard: 'Hanban 2015 HSK 2.0 Standard Course',
+    sourceUrl: 'https://admin.chinesetest.cn/godownload.do',
+    sourceRevision: 'Hanban 2015 Edition',
+    license: 'official_public_syllabus',
+    classification: 'official_sample',
+    verificationStatus: 'verified',
+    durationMinutes: 125,
+    totalQuestions: 100,
+    maxScore: 300,
+    passingScore: 180,
+    hasVerifiedAnswerKey: true,
+    hasListeningAudio: true,
+    hasTranscript: true,
+    sections: [
+      { id: 'listening', title: 'Phần Nghe (听力)', questionCount: 45, durationMinutes: 30, maxScore: 100 },
+      { id: 'reading', title: 'Phần Đọc (阅读)', questionCount: 45, durationMinutes: 45, maxScore: 100 },
+      { id: 'writing', title: 'Phần Viết (书写)', questionCount: 10, durationMinutes: 40, maxScore: 100 },
+    ],
+  },
+  {
+    paperId: 'paper_hsk2_l6_sample01',
+    hskVersion: 'hsk2',
+    level: 6,
+    sourceId: 'CT-2015-H61001',
+    titleZh: '新汉语水平考试 HSK（六级）样卷 H61001',
+    titleVi: 'Đề thi Mẫu Chuẩn HSK 2.0 Cấp 6 (Mã H61001)',
+    syllabusStandard: 'Hanban 2015 HSK 2.0 Standard Course',
+    sourceUrl: 'https://admin.chinesetest.cn/godownload.do',
+    sourceRevision: 'Hanban 2015 Edition',
+    license: 'official_public_syllabus',
+    classification: 'official_sample',
+    verificationStatus: 'verified',
+    durationMinutes: 140,
+    totalQuestions: 101,
+    maxScore: 300,
+    passingScore: 180,
+    hasVerifiedAnswerKey: true,
+    hasListeningAudio: true,
+    hasTranscript: true,
+    sections: [
+      { id: 'listening', title: 'Phần Nghe (听力)', questionCount: 50, durationMinutes: 35, maxScore: 100 },
+      { id: 'reading', title: 'Phần Đọc (阅读)', questionCount: 50, durationMinutes: 50, maxScore: 100 },
+      { id: 'writing', title: 'Phần Viết (书写)', questionCount: 1, durationMinutes: 45, maxScore: 100 },
+    ],
+  },
+
+  // HSK 3.0 (GF0025-2021 Tiêu chuẩn Mới) — Levels 1 to 6 & Band 7–9
+  {
+    paperId: 'paper_hsk3_l1_sample01',
+    hskVersion: 'hsk3',
+    level: 1,
+    sourceId: 'GF0025-2021-S1',
+    titleZh: 'HSK 3.0 初等一级示范模拟卷',
+    titleVi: 'Đề thi Chuẩn HSK 3.0 Sơ cấp 1 (GF0025-2021)',
+    syllabusStandard: 'Tiêu chuẩn Đẳng cấp Trình độ Hán ngữ GF0025-2021',
+    sourceUrl: 'https://www.chinesetest.cn/syllabus',
+    sourceRevision: 'GF0025-2021 Khảo thí 2024',
+    license: 'educational_fair_use',
+    classification: 'official_sample',
+    verificationStatus: 'verified',
+    durationMinutes: 40,
+    totalQuestions: 40,
+    maxScore: 200,
+    passingScore: 120,
+    hasVerifiedAnswerKey: true,
+    hasListeningAudio: true,
+    hasTranscript: true,
+    sections: [
+      { id: 'listening', title: 'Phần Nghe (听力)', questionCount: 20, durationMinutes: 15, maxScore: 100 },
+      { id: 'reading', title: 'Phần Đọc (阅读)', questionCount: 20, durationMinutes: 20, maxScore: 100 },
+    ],
+  },
+  {
+    paperId: 'paper_hsk3_l2_sample01',
+    hskVersion: 'hsk3',
+    level: 2,
+    sourceId: 'GF0025-2021-S2',
+    titleZh: 'HSK 3.0 初等二级示范模拟卷',
+    titleVi: 'Đề thi Chuẩn HSK 3.0 Sơ cấp 2 (GF0025-2021)',
+    syllabusStandard: 'Tiêu chuẩn Đẳng cấp Trình độ Hán ngữ GF0025-2021',
+    sourceUrl: 'https://www.chinesetest.cn/syllabus',
+    sourceRevision: 'GF0025-2021 Khảo thí 2024',
+    license: 'educational_fair_use',
+    classification: 'official_sample',
+    verificationStatus: 'verified',
+    durationMinutes: 55,
+    totalQuestions: 60,
+    maxScore: 200,
+    passingScore: 120,
+    hasVerifiedAnswerKey: true,
+    hasListeningAudio: true,
+    hasTranscript: true,
+    sections: [
+      { id: 'listening', title: 'Phần Nghe (听力)', questionCount: 30, durationMinutes: 25, maxScore: 100 },
+      { id: 'reading', title: 'Phần Đọc (阅读)', questionCount: 30, durationMinutes: 25, maxScore: 100 },
+    ],
+  },
+  {
+    paperId: 'paper_hsk3_l3_sample01',
+    hskVersion: 'hsk3',
+    level: 3,
+    sourceId: 'GF0025-2021-S3',
+    titleZh: 'HSK 3.0 初等三级示范模拟卷',
+    titleVi: 'Đề thi Chuẩn HSK 3.0 Sơ cấp 3 (GF0025-2021)',
+    syllabusStandard: 'Tiêu chuẩn Đẳng cấp Trình độ Hán ngữ GF0025-2021',
+    sourceUrl: 'https://www.chinesetest.cn/syllabus',
+    sourceRevision: 'GF0025-2021 Khảo thí 2024',
+    license: 'educational_fair_use',
+    classification: 'official_sample',
+    verificationStatus: 'verified',
+    durationMinutes: 90,
+    totalQuestions: 80,
+    maxScore: 300,
+    passingScore: 180,
+    hasVerifiedAnswerKey: true,
+    hasListeningAudio: true,
+    hasTranscript: true,
+    sections: [
+      { id: 'listening', title: 'Phần Nghe (听力)', questionCount: 40, durationMinutes: 35, maxScore: 100 },
+      { id: 'reading', title: 'Phần Đọc (阅读)', questionCount: 30, durationMinutes: 30, maxScore: 100 },
+      { id: 'writing', title: 'Phần Viết (书写)', questionCount: 10, durationMinutes: 15, maxScore: 100 },
+    ],
+  },
+  {
+    paperId: 'paper_hsk3_l4_sample01',
+    hskVersion: 'hsk3',
+    level: 4,
+    sourceId: 'GF0025-2021-S4',
+    titleZh: 'HSK 3.0 中等四级示范模拟卷',
+    titleVi: 'Đề thi Chuẩn HSK 3.0 Trung cấp 1 (GF0025-2021)',
+    syllabusStandard: 'Tiêu chuẩn Đẳng cấp Trình độ Hán ngữ GF0025-2021',
+    sourceUrl: 'https://www.chinesetest.cn/syllabus',
+    sourceRevision: 'GF0025-2021 Khảo thí 2024',
+    license: 'educational_fair_use',
+    classification: 'official_sample',
+    verificationStatus: 'verified',
+    durationMinutes: 105,
+    totalQuestions: 95,
+    maxScore: 300,
+    passingScore: 180,
+    hasVerifiedAnswerKey: true,
+    hasListeningAudio: true,
+    hasTranscript: true,
+    sections: [
+      { id: 'listening', title: 'Phần Nghe (听力)', questionCount: 40, durationMinutes: 30, maxScore: 100 },
+      { id: 'reading', title: 'Phần Đọc (阅读)', questionCount: 40, durationMinutes: 40, maxScore: 100 },
+      { id: 'writing', title: 'Phần Viết (书写)', questionCount: 15, durationMinutes: 25, maxScore: 100 },
+    ],
+  },
+  {
+    paperId: 'paper_hsk3_l5_sample01',
+    hskVersion: 'hsk3',
+    level: 5,
+    sourceId: 'GF0025-2021-S5',
+    titleZh: 'HSK 3.0 中等五级示范模拟卷',
+    titleVi: 'Đề thi Chuẩn HSK 3.0 Trung cấp 2 (GF0025-2021)',
+    syllabusStandard: 'Tiêu chuẩn Đẳng cấp Trình độ Hán ngữ GF0025-2021',
+    sourceUrl: 'https://www.chinesetest.cn/syllabus',
+    sourceRevision: 'GF0025-2021 Khảo thí 2024',
+    license: 'educational_fair_use',
+    classification: 'official_sample',
+    verificationStatus: 'verified',
+    durationMinutes: 125,
+    totalQuestions: 100,
+    maxScore: 300,
+    passingScore: 180,
+    hasVerifiedAnswerKey: true,
+    hasListeningAudio: true,
+    hasTranscript: true,
+    sections: [
+      { id: 'listening', title: 'Phần Nghe (听力)', questionCount: 45, durationMinutes: 30, maxScore: 100 },
+      { id: 'reading', title: 'Phần Đọc (阅读)', questionCount: 45, durationMinutes: 45, maxScore: 100 },
+      { id: 'writing', title: 'Phần Viết (书写)', questionCount: 10, durationMinutes: 40, maxScore: 100 },
+    ],
+  },
+  {
+    paperId: 'paper_hsk3_l6_sample01',
+    hskVersion: 'hsk3',
+    level: 6,
+    sourceId: 'GF0025-2021-S6',
+    titleZh: 'HSK 3.0 中等六级示范模拟卷',
+    titleVi: 'Đề thi Chuẩn HSK 3.0 Trung cấp 3 (GF0025-2021)',
+    syllabusStandard: 'Tiêu chuẩn Đẳng cấp Trình độ Hán ngữ GF0025-2021',
+    sourceUrl: 'https://www.chinesetest.cn/syllabus',
+    sourceRevision: 'GF0025-2021 Khảo thí 2024',
+    license: 'educational_fair_use',
+    classification: 'official_sample',
+    verificationStatus: 'verified',
+    durationMinutes: 140,
+    totalQuestions: 105,
+    maxScore: 300,
+    passingScore: 180,
+    hasVerifiedAnswerKey: true,
+    hasListeningAudio: true,
+    hasTranscript: true,
+    sections: [
+      { id: 'listening', title: 'Phần Nghe (听力)', questionCount: 50, durationMinutes: 35, maxScore: 100 },
+      { id: 'reading', title: 'Phần Đọc (阅读)', questionCount: 50, durationMinutes: 50, maxScore: 100 },
+      { id: 'writing', title: 'Phần Viết (书写)', questionCount: 5, durationMinutes: 45, maxScore: 100 },
+    ],
+  },
+  {
+    paperId: 'paper_hsk3_l79_sample01',
+    hskVersion: 'hsk3',
+    level: 7,
+    sourceId: 'GF0025-2021-S79',
+    titleZh: 'HSK 3.0 高等（七至九级）官方示范试卷',
+    titleVi: 'Đề thi Chuẩn HSK 3.0 Cấp cao (Bậc 7–9 gom dải)',
+    syllabusStandard: 'Tiêu chuẩn GF0025-2021 Cấp độ Cao cấp Tích hợp',
+    sourceUrl: 'https://www.chinesetest.cn/syllabus',
+    sourceRevision: 'CTI Khảo thí Cao cấp 2024',
+    license: 'educational_fair_use',
+    classification: 'official_sample',
+    verificationStatus: 'verified',
+    durationMinutes: 210,
+    totalQuestions: 98,
+    maxScore: 300,
+    passingScore: 180,
+    hasVerifiedAnswerKey: true,
+    hasListeningAudio: true,
+    hasTranscript: true,
+    sections: [
+      { id: 'listening', title: 'Phần Nghe Chuyên sâu (听力)', questionCount: 40, durationMinutes: 40, maxScore: 100 },
+      { id: 'reading', title: 'Phần Đọc Phân tích (阅读)', questionCount: 40, durationMinutes: 60, maxScore: 100 },
+      { id: 'writing', title: 'Phần Luận & Dịch thuật (书写与翻译)', questionCount: 18, durationMinutes: 80, maxScore: 100 },
+    ],
+  },
+];
+
+export function getExamCoverageSummary(): ExamCoverageSummary {
+  const hsk2Levels: Record<number, number> = {};
+  const hsk3Levels: Record<number, number> = {};
+
+  OFFICIAL_EXAM_PAPERS.forEach((p) => {
+    if (p.hskVersion === 'hsk2') {
+      hsk2Levels[p.level] = (hsk2Levels[p.level] || 0) + 1;
+    } else {
+      hsk3Levels[p.level] = (hsk3Levels[p.level] || 0) + 1;
+    }
+  });
+
+  return {
+    totalPapers: OFFICIAL_EXAM_PAPERS.length,
+    verifiedPapers: OFFICIAL_EXAM_PAPERS.filter((p) => p.verificationStatus === 'verified').length,
+    papersWithVerifiedAnswers: OFFICIAL_EXAM_PAPERS.filter((p) => p.hasVerifiedAnswerKey).length,
+    papersWithListeningAudio: OFFICIAL_EXAM_PAPERS.filter((p) => p.hasListeningAudio).length,
+    hsk2Count: OFFICIAL_EXAM_PAPERS.filter((p) => p.hskVersion === 'hsk2').length,
+    hsk3Count: OFFICIAL_EXAM_PAPERS.filter((p) => p.hskVersion === 'hsk3').length,
+    versionBreakdown: {
+      hsk2: hsk2Levels,
+      hsk3: hsk3Levels,
+    },
+    sourcesCited: OFFICIAL_EXAM_SOURCES.map((s) => s.url),
+  };
+}

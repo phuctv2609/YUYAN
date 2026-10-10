@@ -28,6 +28,42 @@ import { aiApiService } from '../../services/ai/aiApiService';
 import { learningProgressService } from '../../services/progress/learningProgressService';
 import { useToast } from '../ui/Toast';
 
+export const GRAMMAR_CATEGORY_VI: Record<string, string> = {
+  '语素': 'Hình vị (Morphemes)',
+  '词类': 'Từ loại (Word Classes)',
+  '短语': 'Cụm từ (Đoản ngữ)',
+  '句子成分': 'Thành phần câu',
+  '句子的类型': 'Các loại câu',
+  '动作的态': 'Trạng thái hành động',
+  '特殊表达法': 'Cách biểu đạt đặc biệt',
+  '固定格式': 'Kết cấu cố định',
+  '语段（句群）': 'Ngữ đoạn & Nhóm câu',
+  '副词': 'Phó từ',
+  '介词': 'Giới từ',
+  '连词': 'Liên từ',
+  '助词': 'Trợ từ',
+  '动词': 'Động từ',
+  '形容词': 'Tính từ',
+  '代词': 'Đại từ',
+  '量词': 'Lượng từ',
+  '数词': 'Số từ',
+  '叹词': 'Thán từ',
+  '拟声词': 'Từ tượng thanh',
+  '前缀': 'Tiền tố',
+  '后缀': 'Hậu tố',
+  '主语': 'Chủ ngữ',
+  '谓语': 'Vị ngữ',
+  '宾语': 'Tân ngữ',
+  '定语': 'Định ngữ',
+  '状语': 'Trạng ngữ',
+  '补语': 'Bổ ngữ',
+};
+
+export function formatGrammarCategory(category: string): string {
+  if (!category) return '';
+  return GRAMMAR_CATEGORY_VI[category] || category;
+}
+
 export const GrammarPracticeView: React.FC = () => {
   const { showToast } = useToast();
   
@@ -300,11 +336,11 @@ export const GrammarPracticeView: React.FC = () => {
                     {selectedGrammar.syllabusEdition || 'GF0025-2021'}
                   </span>
                   <span className="text-2xs font-semibold px-2 py-0.5 rounded bg-primary-soft text-primary">
-                    {selectedGrammar.category}
+                    {formatGrammarCategory(selectedGrammar.category)}
                   </span>
                   {selectedGrammar.subCategory && (
                     <span className="text-2xs font-medium px-2 py-0.5 rounded bg-surface-secondary text-text-muted">
-                      {selectedGrammar.subCategory}
+                      {formatGrammarCategory(selectedGrammar.subCategory)}
                     </span>
                   )}
                 </div>
@@ -339,7 +375,7 @@ export const GrammarPracticeView: React.FC = () => {
                         : 'text-text-secondary hover:text-text-primary'
                     }`}
                   >
-                    Mini-Quiz ({selectedGrammar.practiceExercises?.length || 0})
+                    Trắc nghiệm tự luyện ({selectedGrammar.practiceExercises?.length || 0})
                   </button>
                   <button
                     onClick={() => {
@@ -727,7 +763,7 @@ export const GrammarPracticeView: React.FC = () => {
                       }`}
                     >
                       <HelpCircle className="w-4 h-4 text-purple-500" />
-                      <span>Tạo quiz trắc nghiệm</span>
+                      <span>Tạo bài trắc nghiệm</span>
                     </button>
                   </div>
 
@@ -919,7 +955,7 @@ export const GrammarPracticeView: React.FC = () => {
                       : 'bg-surface-secondary text-text-muted hover:text-text-primary'
                   }`}
                 >
-                  {cat}
+                  {formatGrammarCategory(cat)}
                 </button>
               ))}
             </div>
@@ -948,7 +984,7 @@ export const GrammarPracticeView: React.FC = () => {
                       {g.bandLabel || `HSK ${g.level}`}
                     </span>
                     <span className="text-2xs text-text-muted truncate max-w-[120px]">
-                      {g.category}
+                      {formatGrammarCategory(g.category)}
                     </span>
                   </div>
                   <h4 className="font-bold text-text-primary text-xs leading-snug">{g.title}</h4>
