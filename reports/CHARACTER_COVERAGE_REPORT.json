@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-10-02T06:54:24.540Z",
+  "lessonsCount": 146,
+  "sentencesCount": 9178,
+  "vocabularyItemsCount": 8456,
+  "uniqueWords": 1325,
+  "uniqueCharactersInCorpus": 1320,
+  "catalogedHanziCount": 1059,
+  "kangxiRadicalsCount": 214,
+  "completeRadicalsCount": 214,
+  "strokeDataCoverage": "100.0%",
+  "radicalBindingCoverage": "100.0%",
+  "status": "VERIFIED_CANONICAL"
+}

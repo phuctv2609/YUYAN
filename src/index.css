@@ -1,0 +1,237 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  /* Core Light Palette */
+  --bg-canvas: #F7FAFD;
+  --surface: #FFFFFF;
+  --surface-secondary: #F1F6FB;
+  --surface-elevated: #FFFFFF;
+  --border-subtle: #DCE8F5;
+  --divider-line: #E8F0F7;
+  --input-bg: #F8FBFE;
+  
+  --text-primary: #172B4D;
+  --text-secondary: #52657D;
+  --text-muted: #7E90A5;
+  --disabled: #A9B6C4;
+
+  --primary: #0062a1;
+  --primary-hover: #4B91D8;
+  --primary-active: #3F83CA;
+  --primary-container: #5b9fe3;
+  --primary-soft: #EAF4FF;
+  --primary-ultra-soft: #F4F9FE;
+  --coral-soft: #FFE8EC;
+  --deep-blue: #2869A7;
+
+  /* Premium Glow Tokens */
+  --glow-primary: 0 0 20px rgba(91, 159, 227, 0.35);
+  --glow-soft: 0 0 15px rgba(91, 159, 227, 0.18);
+  --glow-active: 0 0 25px rgba(91, 159, 227, 0.5);
+  --glow-success: 0 0 20px rgba(72, 185, 138, 0.35);
+  --glow-warning: 0 0 20px rgba(244, 185, 94, 0.35);
+
+  /* Layout Dimension Tokens */
+  --audio-controller-height: 68px;
+  --mobile-navigation-height: 60px;
+  --top-navbar-height: 68px;
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  /* Mobile clearance: Audio controller (68px) + Bottom nav (60px) + buffer (16px) */
+  --lesson-bottom-padding: calc(var(--audio-controller-height) + var(--mobile-navigation-height) + var(--safe-area-bottom) + 16px);
+}
+
+@media (min-width: 768px) {
+  :root, .dark {
+    /* Desktop clearance: Audio controller only (68px) + buffer (24px) */
+    --lesson-bottom-padding: calc(var(--audio-controller-height) + 24px);
+  }
+}
+
+.dark {
+  color-scheme: dark;
+  /* Calibrated Genuine Deep Navy Dark Mode */
+  --bg-canvas: #0B132B;
+  --surface: #111D42;
+  --surface-secondary: #162553;
+  --surface-elevated: #1D3068;
+  --border-subtle: #20346E;
+  --divider-line: #1C2D5C;
+  --input-bg: #14224D;
+
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --disabled: #475569;
+
+  --primary: #5B9FE3;
+  --primary-hover: #7AB4ED;
+  --primary-active: #4A8FD8;
+  --primary-container: #3F83CA;
+  --primary-soft: #1A2F61;
+  --primary-ultra-soft: #13224B;
+  --coral-soft: #381A28;
+  --deep-blue: #7AB4ED;
+
+  /* Calibrated Dark Glow Tokens */
+  --glow-primary: 0 0 24px rgba(91, 159, 227, 0.5);
+  --glow-soft: 0 0 18px rgba(91, 159, 227, 0.28);
+  --glow-active: 0 0 30px rgba(91, 159, 227, 0.7);
+  --glow-success: 0 0 24px rgba(72, 185, 138, 0.45);
+  --glow-warning: 0 0 24px rgba(244, 185, 94, 0.45);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    min-height: 100%;
+    scrollbar-color: var(--border-subtle) var(--surface-secondary);
+  }
+
+  body {
+    @apply antialiased;
+    font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+}
+
+.font-hanzi {
+  font-family: 'Noto Sans SC', sans-serif;
+}
+
+/* Controlled Theme Transition for Containers (Prevent global flash) */
+.theme-transition body,
+.theme-transition #root,
+.theme-transition header,
+.theme-transition nav,
+.theme-transition aside,
+.theme-transition main,
+.theme-transition footer {
+  transition-property: background-color, border-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Ambient Glow Layer */
+.ambient-glow-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  opacity: 0.65;
+}
+
+.ambient-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  will-change: transform, opacity;
+  animation: ambient-drift 22s ease-in-out infinite alternate;
+}
+
+@keyframes ambient-drift {
+  0% { transform: translate(0, 0) scale(1); opacity: 0.35; }
+  50% { transform: translate(45px, -30px) scale(1.1); opacity: 0.6; }
+  100% { transform: translate(-35px, 35px) scale(0.95); opacity: 0.4; }
+}
+
+/* Light Beam Shimmer for Selected Cards & Header */
+.light-beam-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.light-beam-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(91, 159, 227, 0.07), rgba(255, 255, 255, 0.14), rgba(91, 159, 227, 0.07), transparent);
+  transform: skewX(-20deg);
+  pointer-events: none;
+  animation: light-beam-sweep 9s ease-in-out infinite;
+}
+
+@keyframes light-beam-sweep {
+  0%, 65% { left: -150%; opacity: 0; }
+  80% { opacity: 1; }
+  100% { left: 200%; opacity: 0; }
+}
+
+/* Micro-Interaction Motion Classes */
+.btn-motion {
+  transition: transform 150ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 150ms cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 150ms ease,
+              border-color 150ms ease;
+}
+.btn-motion:hover {
+  transform: translateY(-1px);
+}
+.btn-motion:active {
+  transform: scale(0.98);
+}
+
+.card-motion {
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 200ms ease;
+}
+.card-motion:hover {
+  transform: translateY(-2px);
+}
+
+/* Selected Target Sentence Highlight & Glow */
+.sentence-target-active {
+  box-shadow: var(--glow-soft);
+}
+
+/* Custom Scrollbars */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--surface-secondary);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--disabled);
+}
+
+/* Clickable Hanzi Tokens */
+.clickable-hanzi-token {
+  transition: all 0.15s ease-out;
+  border-radius: 4px;
+  padding: 0 2px;
+}
+.clickable-hanzi-token:hover {
+  background-color: var(--primary-soft);
+  color: var(--primary);
+  cursor: pointer;
+}
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .ambient-orb {
+    animation: none !important;
+  }
+  .light-beam-shimmer::after {
+    display: none !important;
+  }
+}

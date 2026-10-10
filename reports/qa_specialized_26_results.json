@@ -1,0 +1,72 @@
+{
+  "tests": [
+    {
+      "name": "All 26 industries displayed",
+      "passed": true,
+      "actual": 26
+    },
+    {
+      "name": "Total count metric is 10.000",
+      "passed": true,
+      "actual": "10.000"
+    },
+    {
+      "name": "Active industry title is \"Xuất nhập khẩu\"",
+      "passed": true,
+      "actual": "Xuất nhập khẩu"
+    },
+    {
+      "name": "Subcategories loaded for Xuất nhập khẩu (>= 15 subcategories)",
+      "passed": true,
+      "actual": 21
+    },
+    {
+      "name": "Vocabulary card displays real Chinese term (e.g. 报关管理)",
+      "passed": true,
+      "actual": "报关管理"
+    },
+    {
+      "name": "Detail Modal opens successfully",
+      "passed": true,
+      "actual": "报关管理"
+    },
+    {
+      "name": "Gemini AI Tutor Modal opens successfully",
+      "passed": true,
+      "actual": true
+    },
+    {
+      "name": "Pagination moves to Page 2",
+      "passed": true,
+      "actual": "2 / 17"
+    },
+    {
+      "name": "Mobile viewport responsive render",
+      "passed": true
+    },
+    {
+      "name": "Dynamic 26 industries appear in dictionary filter",
+      "passed": true,
+      "actual": 30
+    },
+    {
+      "name": "Dictionary unified search returns results for 26-industry terms",
+      "passed": true,
+      "actual": 30
+    }
+  ],
+  "consoleErrors": [],
+  "screenshots": [
+    "qa_specialized_detail_modal.png",
+    "qa_specialized_gemini_modal.png",
+    "qa_desktop_specialized_26_industries.png",
+    "qa_mobile_specialized_26.png",
+    "qa_desktop_dictionary_unified_26.png"
+  ],
+  "summary": {
+    "totalTests": 11,
+    "passed": 11,
+    "failed": 0,
+    "consoleErrorCount": 0
+  }
+}

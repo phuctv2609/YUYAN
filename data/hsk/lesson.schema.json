@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "YUYAN Lesson",
+  "type": "object",
+  "required": [
+    "lessonId",
+    "level",
+    "lessonNumber",
+    "title",
+    "sourceFile",
+    "sections",
+    "lessonText"
+  ],
+  "properties": {
+    "lessonId": {
+      "type": "string"
+    },
+    "level": {
+      "type": "integer"
+    },
+    "lessonNumber": {
+      "type": "integer"
+    },
+    "title": {
+      "type": "string"
+    },
+    "sourceFile": {
+      "type": "string"
+    },
+    "sourcePath": {
+      "type": "string"
+    },
+    "paragraphCount": {
+      "type": "integer"
+    },
+    "sections": {
+      "type": "array"
+    },
+    "lessonText": {
+      "type": "array"
+    },
+    "sourceIntegrity": {
+      "type": "object"
+    }
+  }
+}

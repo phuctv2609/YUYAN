@@ -1,0 +1,17 @@
+{
+  "name": "YUYAN_Professional_Vocabulary_10000_v2",
+  "source_file": "Yuyan_Professional_Vocabulary_10000_v1(1).zip",
+  "source_records": 10000,
+  "processed_records": 10000,
+  "customer_publishable_now": false,
+  "status": "review_required",
+  "fixes": {
+    "AUTO_NORMALIZED_VIETNAMESE": 4539,
+    "COLLOCATION_REQUIRES_REVIEW": 9901,
+    "EXAMPLE_GENERATED_ORIGINAL_REVIEW_REQUIRED": 10000,
+    "AUTO_FIXED_DUPLICATED_HANZI": 99,
+    "DUPLICATE_SAME_CATEGORY_SUBCATEGORY": 62,
+    "TAXONOMY_REVIEW_DAILY_CATEGORY_MISMATCH": 1500,
+    "TAXONOMY_REVIEW_TEXTILE_CATEGORY_MISMATCH": 304
+  }
+}

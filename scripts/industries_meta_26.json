@@ -1,0 +1,210 @@
+[
+  {
+    "slug": "van_phong_doanh_nghiep",
+    "name_vi": "Văn phòng – doanh nghiệp",
+    "name_zh": "办公与企业",
+    "name_en": "Office & Enterprise",
+    "icon": "Building2",
+    "desc": "Hành chính, văn phòng, quản lý dự án, cuộc họp và quy trình doanh nghiệp"
+  },
+  {
+    "slug": "kinh_doanh_thuong_mai",
+    "name_vi": "Kinh doanh – thương mại",
+    "name_zh": "商务与贸易",
+    "name_en": "Business & Trade",
+    "icon": "TrendingUp",
+    "desc": "Nghiệp vụ thương mại, bán hàng, đàm phán hợp đồng, đối tác và phát triển thị trường"
+  },
+  {
+    "slug": "xuat_nhap_khau",
+    "name_vi": "Xuất nhập khẩu",
+    "name_zh": "进出口贸易",
+    "name_en": "Import & Export",
+    "icon": "Ship",
+    "desc": "Thủ tục hải quan, thông quan hàng hóa, xuất xứ, vận đơn và kiểm nghiệm"
+  },
+  {
+    "slug": "logistics_chuoi_cung_ung",
+    "name_vi": "Logistics – chuỗi cung ứng",
+    "name_zh": "物流与供应链",
+    "name_en": "Logistics & Supply Chain",
+    "icon": "Truck",
+    "desc": "Vận tải đa phương thức, kho bãi, đóng gói phân phối và quản lý chuỗi cung ứng"
+  },
+  {
+    "slug": "san_xuat_nha_may",
+    "name_vi": "Sản xuất – nhà máy",
+    "name_zh": "工厂生产与制造",
+    "name_en": "Manufacturing & Factory",
+    "icon": "Factory",
+    "desc": "Dây chuyền sản xuất, vận hành xưởng, quản lý năng suất, an toàn lao động và bảo trì"
+  },
+  {
+    "slug": "co_khi_che_tao",
+    "name_vi": "Cơ khí – chế tạo",
+    "name_zh": "机械工程与制造",
+    "name_en": "Mechanical Engineering",
+    "icon": "Cog",
+    "desc": "Gia công cơ khí, máy CNC, khuôn mẫu kim loại, dung sai và linh kiện máy"
+  },
+  {
+    "slug": "dien_dien_tu",
+    "name_vi": "Điện – điện tử",
+    "name_zh": "电气与电子工程",
+    "name_en": "Electrical & Electronics",
+    "icon": "Zap",
+    "desc": "Mạch điện tử, linh kiện bán dẫn, điện áp, thiết bị điều khiển và hệ thống điện tử"
+  },
+  {
+    "slug": "tu_dong_hoa_robot",
+    "name_vi": "Tự động hóa – robot",
+    "name_zh": "自动化与机器人",
+    "name_en": "Automation & Robotics",
+    "icon": "Bot",
+    "desc": "Cánh tay robot, cảm biến công nghiệp, lập trình PLC, hệ thống SCADA và tự động hóa"
+  },
+  {
+    "slug": "cntt_phan_mem",
+    "name_vi": "CNTT – phần mềm",
+    "name_zh": "信息技术与软件",
+    "name_en": "IT & Software",
+    "icon": "Code",
+    "desc": "Lập trình ứng dụng, cơ sở dữ liệu, kiến trúc hệ thống, đám mây và an ninh mạng"
+  },
+  {
+    "slug": "ai_du_lieu_cong_nghe_moi",
+    "name_vi": "AI – dữ liệu – công nghệ mới",
+    "name_zh": "人工智能与大数据",
+    "name_en": "AI & Data Science",
+    "icon": "Brain",
+    "desc": "Trí tuệ nhân tạo, học máy, phân tích dữ liệu lớn, xử lý ngôn ngữ tự nhiên và thị giác máy tính"
+  },
+  {
+    "slug": "tai_chinh_ke_toan_ngan_hang",
+    "name_vi": "Tài chính – kế toán – ngân hàng",
+    "name_zh": "金融、会计与银行",
+    "name_en": "Finance & Banking",
+    "icon": "DollarSign",
+    "desc": "Báo cáo tài chính, hạch toán kế toán, tín dụng ngân hàng, thanh toán quốc tế và kiểm toán"
+  },
+  {
+    "slug": "luat_phap_ly",
+    "name_vi": "Luật – pháp lý",
+    "name_zh": "法律与法务",
+    "name_en": "Law & Legal",
+    "icon": "Scale",
+    "desc": "Văn bản pháp quy, tranh chấp thương mại, điều khoản hợp đồng và tư vấn pháp lý"
+  },
+  {
+    "slug": "nhan_su",
+    "name_vi": "Nhân sự",
+    "name_zh": "人力资源",
+    "name_en": "Human Resources",
+    "icon": "Users",
+    "desc": "Tuyển dụng nhân tài, đào tạo nội bộ, đánh giá KPI, tiền lương và chế độ đãi ngộ"
+  },
+  {
+    "slug": "marketing_truyen_thong",
+    "name_vi": "Marketing – truyền thông",
+    "name_zh": "市场营销与传播",
+    "name_en": "Marketing & PR",
+    "icon": "Megaphone",
+    "desc": "Chiến dịch tiếp thị, quảng bá thương hiệu, truyền thông số, quan hệ công chúng và nội dung"
+  },
+  {
+    "slug": "xay_dung_kien_truc",
+    "name_vi": "Xây dựng – kiến trúc",
+    "name_zh": "建筑与工程",
+    "name_en": "Construction & Architecture",
+    "icon": "HardHat",
+    "desc": "Thiết kế kiến trúc, kết cấu công trình, dự toán thi công, an toàn công trường và vật liệu"
+  },
+  {
+    "slug": "hoa_hoc_vat_lieu",
+    "name_vi": "Hóa học – vật liệu",
+    "name_zh": "化学与材料科学",
+    "name_en": "Chemistry & Materials",
+    "icon": "FlaskConical",
+    "desc": "Phản ứng hóa học, vật liệu polyme, hợp kim kim loại, hóa chất công nghiệp và kiểm nghiệm"
+  },
+  {
+    "slug": "khoa_hoc_nghien_cuu",
+    "name_vi": "Khoa học – nghiên cứu",
+    "name_zh": "科学与研究",
+    "name_en": "Science & Research",
+    "icon": "Microscope",
+    "desc": "Phương pháp luận nghiên cứu, thử nghiệm khoa học, báo cáo học thuật và số liệu thực nghiệm"
+  },
+  {
+    "slug": "y_te_duoc",
+    "name_vi": "Y tế – dược",
+    "name_zh": "医疗与医药",
+    "name_en": "Medical & Pharma",
+    "icon": "Stethoscope",
+    "desc": "Chẩn đoán lâm sàng, dược lý, bệnh viện, phác đồ điều trị và trang thiết bị y tế"
+  },
+  {
+    "slug": "giao_duc_hoc_thuat",
+    "name_vi": "Giáo dục – học thuật",
+    "name_zh": "教育与学术",
+    "name_en": "Education & Academics",
+    "icon": "GraduationCap",
+    "desc": "Giáo trình đào tạo, phương pháp sư phạm, khảo thí, học thuật và quản trị trường học"
+  },
+  {
+    "slug": "du_lich_khach_san_nha_hang",
+    "name_vi": "Du lịch – khách sạn – nhà hàng",
+    "name_zh": "旅游、酒店与餐饮",
+    "name_en": "Tourism & Hospitality",
+    "icon": "Hotel",
+    "desc": "Nghiệp vụ lễ tân, dịch vụ ẩm thực, điều hành tour, đón tiếp khách quốc tế và quản trị lưu trú"
+  },
+  {
+    "slug": "o_to_giao_thong",
+    "name_vi": "Ô tô – giao thông",
+    "name_zh": "汽车与交通工程",
+    "name_en": "Automotive & Transport",
+    "icon": "Car",
+    "desc": "Động cơ ô tô, xe điện, an toàn giao thông, phụ tùng xe và hệ thống điều khiển lái"
+  },
+  {
+    "slug": "nong_nghiep_thuc_pham",
+    "name_vi": "Nông nghiệp – thực phẩm",
+    "name_zh": "农业与食品工业",
+    "name_en": "Agriculture & Food",
+    "icon": "Wheat",
+    "desc": "Trồng trọt, chăn nuôi, chế biến thực phẩm, kiểm dịch vệ sinh an toàn thực phẩm và nông nghiệp sạch"
+  },
+  {
+    "slug": "moi_truong_nang_luong",
+    "name_vi": "Môi trường – năng lượng",
+    "name_zh": "环境与新能源",
+    "name_en": "Environment & Energy",
+    "icon": "Leaf",
+    "desc": "Năng lượng tái tạo, xử lý nước thải khí thải, bảo vệ sinh thái và phát triển bền vững"
+  },
+  {
+    "slug": "thiet_ke_nghe_thuat_thoi_trang",
+    "name_vi": "Thiết kế – nghệ thuật – thời trang",
+    "name_zh": "设计、艺术与时尚",
+    "name_en": "Design & Fashion",
+    "icon": "Palette",
+    "desc": "Thiết kế đồ họa, thời trang may mặc, mỹ thuật ứng dụng, xu hướng tạo mẫu và sáng tạo"
+  },
+  {
+    "slug": "the_thao",
+    "name_vi": "Thể thao",
+    "name_zh": "体育与运动",
+    "name_en": "Sports & Fitness",
+    "icon": "Trophy",
+    "desc": "Huấn luyện thể chất, thi đấu thể thao, chiến thuật chuyên môn và quản lý câu lạc bộ"
+  },
+  {
+    "slug": "vien_thong_mang",
+    "name_vi": "Viễn thông – mạng",
+    "name_zh": "电信与网络",
+    "name_en": "Telecom & Networks",
+    "icon": "Radio",
+    "desc": "Hạ tầng viễn thông, mạng 5G, cáp quang, định tuyến viễn thông và thiết bị trạm phát"
+  }
+]

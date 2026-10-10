@@ -1,0 +1,11 @@
+﻿id,name_vi,name_zh,description,icon,sort_order,term_count,status,source_term_count,customer_visible,data_quality_gate
+logistics_customs,Logistics & Hải quan,物流与海关,"Logistics, xuất nhập khẩu, kho vận và hải quan",logistics-customs.svg,1,800,active,800,true,review_required
+mechanical_manufacturing,Cơ khí & Sản xuất,机械与制造,"Cơ khí, chế tạo, sản xuất, bảo trì và chất lượng",mechanical-manufacturing.svg,2,1600,active,1600,true,review_required
+textile_footwear,Dệt may & Da giày,纺织服装与鞋业,"Dệt, may, thời trang, da và giày",textile-footwear.svg,3,380,active,380,true,review_required
+it_electronics,Công nghệ Thông tin & Điện tử,信息技术与电子,"Phần mềm, phần cứng, mạng, điện tử và công nghệ số",it-electronics.svg,4,1220,active,1220,true,review_required
+finance_banking_accounting,"Tài chính, Ngân hàng & Kế toán",金融、银行与会计,"Tài chính, ngân hàng, kế toán, thuế và kiểm toán",finance-banking-accounting.svg,5,400,active,400,true,review_required
+healthcare_pharma,"Y tế, Bệnh viện & Dược phẩm",医疗、医院与药剂,"Bệnh viện, y tế, điều dưỡng, dược và thiết bị y tế",healthcare-pharma.svg,6,400,active,400,true,review_required
+hotel_tourism_food,"Khách sạn, Du lịch & Ẩm thực",酒店、旅游与餐饮,"Khách sạn, du lịch, nhà hàng và dịch vụ ẩm thực",hotel-tourism-food.svg,7,400,active,400,true,review_required
+architecture_construction_materials,"Kiến trúc, Xây dựng & Vật liệu",建筑与建材,"Kiến trúc, xây dựng, công trình và vật liệu",architecture-construction-materials.svg,8,800,active,800,true,review_required
+legal_hr_office,"Pháp lý, Nhân sự & Văn phòng",法律、人力与商务,"Pháp lý, nhân sự, hành chính và nghiệp vụ văn phòng",legal-hr-office.svg,9,2400,active,2400,true,review_required
+daily_chemicals_lifestyle,Hóa mỹ phẩm & Đời sống,日化与生活,"Hóa mỹ phẩm, chăm sóc cá nhân và sản phẩm đời sống",daily-chemicals-lifestyle.svg,10,1600,active,1600,true,review_required

@@ -1,0 +1,10 @@
+{
+  "totalLines": 122627,
+  "commentLines": 30,
+  "parsedCount": 122595,
+  "duplicatesCount": 2,
+  "uniqueEntriesCount": 122595,
+  "rejectedLinesCount": 0,
+  "rejectedLines": [],
+  "leakageTotalCount": 71
+}
