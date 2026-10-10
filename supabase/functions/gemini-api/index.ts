@@ -551,8 +551,11 @@ YÊU CẦU ĐẦU RA (JSON DUY NHẤT, KHÔNG CÓ MARKDOWN HOẶC TEXT KHÁC):
       const question = (body.question || body.message || '').trim();
       const history = Array.isArray(body.history) ? body.history : [];
       const contextItem = body.contextItem || null;
+      const targetLanguage = body.targetLanguage || 'vi';
+      const systemInstructionAddendum = body.systemInstructionAddendum || '';
+      const attachment = body.attachment || null;
 
-      if (!question) {
+      if (!question && !attachment) {
         return new Response(
           JSON.stringify({ error: 'EMPTY_QUESTION', message: 'Nội dung câu hỏi không được để trống' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -573,31 +576,51 @@ YÊU CẦU ĐẦU RA (JSON DUY NHẤT, KHÔNG CÓ MARKDOWN HOẶC TEXT KHÁC):
 - Cấp độ: ${contextItem.level || ''}`;
       }
 
-      const prompt = `Bạn là Cố vấn Sư phạm Hán ngữ Cao cấp (Senior AI Chinese Tutor) thuộc nền tảng YUYAN (Khẩu hiệu: "Học tiếng Trung theo cách của bạn.").
-Nhiệm vụ: Trả lời bất kỳ câu hỏi nào của người học tiếng Trung bằng tiếng Việt sư phạm, chu đáo, chuẩn xác và dễ hiểu.
+      let attachmentPrompt = '';
+      if (attachment) {
+        attachmentPrompt = `\n[HỌC VIÊN ĐÍNH KÈM TỆP TIN: "${attachment.name || 'attachment'}" (${attachment.type || 'file'})]`;
+        if (attachment.textContent) {
+          attachmentPrompt += `\nNội dung văn bản trích xuất từ tệp:\n"""\n${attachment.textContent.slice(0, 10000)}\n"""`;
+        }
+      }
+
+      const promptText = `Bạn là Cố vấn Sư phạm Hán ngữ Cao cấp (Senior AI Chinese Tutor) thuộc nền tảng YUYAN (Khẩu hiệu: "Học tiếng Trung theo cách của bạn.").
+Nhiệm vụ: Trả lời câu hỏi và hướng dẫn học tiếng Trung cho người học một cách sư phạm, chuẩn mực, chu đáo và dễ hiểu.
 ${contextPrompt}
+${attachmentPrompt}
 
 Lịch sử trò chuyện gần nhất:
 ${formattedHistory || '(Chưa có lịch sử)'}
 
-Câu hỏi mới nhất của học viên: "${question}"
+Câu hỏi mới nhất của học viên: "${question || 'Phân tích tệp tin đính kèm này giúp tôi'}"
 
-YÊU CẦU NỘI DUNG & ĐỊNH DẠNG:
-1. Ngôn ngữ giải thích mặc định: Tiếng Việt sư phạm, rõ ràng, thân thiện.
-2. Mọi câu ví dụ tiếng Trung BẮT BUỘC có đủ 3 thành phần:
+YÊU CẦU NGÔN NGỮ & ĐỊNH DẠNG SƯ PHẠM:
+${systemInstructionAddendum || (targetLanguage === 'zh' ? 'Trả lời hoàn toàn bằng tiếng Trung (Mandarin) tự nhiên, sư phạm.' : 'Giải thích bằng tiếng Việt sư phạm, chu đáo, dễ hiểu.')}
+
+TIÊU CHUẨN TRÌNH BÀY CHUYÊN BIỆT CHO HỌC TIẾNG TRUNG:
+1. Mọi câu ví dụ tiếng Trung BẮT BUỘC có đủ:
    - Chữ Hán giản thể chuẩn
-   - Phiên âm Pinyin có đầy đủ dấu thanh điệu
-   - Bản dịch tiếng Việt tự nhiên và chuẩn xác
-3. Khả năng hỗ trợ:
-   - Ngữ pháp, mẫu câu, trật tự từ
-   - Phân biệt các cặp từ gần nghĩa / dễ nhầm lẫn
-   - Sửa lỗi câu & lý giải nguyên nhân can thiệp từ tiếng Việt
-   - Luyện dịch song ngữ Trung - Việt
-   - Luyện thi HSK 2.0 & HSK 3.0 (GF0025-2021)
-   - Tiếng Trung chuyên ngành (Thương mại, Công xưởng, IT, Logistics)
-4. Nếu người học hỏi về chủ đề hoàn toàn không liên quan đến tiếng Trung / văn hóa Trung Hoa, hãy lịch sự từ chối và nhắc học viên quay lại chủ đề ngôn ngữ.`;
+   - Phiên âm Pinyin đầy đủ thanh điệu
+   - Bản dịch nghĩa tự nhiên (bằng tiếng Việt hoặc ngôn ngữ của học viên)
+2. Tách biệt rõ ràng các đoạn chữ Hán và lời giải thích để hệ thống tổng hợp giọng đọc phát âm chuẩn xác từng ngôn ngữ.
+3. Sử dụng Markdown rõ ràng (tiêu đề ###, in đậm **, danh sách -) để cấu trúc nội dung khoa học, súc tích.
+4. Nếu học viên đính kèm hình ảnh hoặc bài tập, hãy đọc kỹ nội dung, phân tích đáp án từng bước và chỉ ra lỗi sai kèm bài học rút ra.`;
 
-      const geminiRes = await callGemini(geminiKey, prompt, false);
+      let promptPayload: any = promptText;
+      if (attachment && attachment.dataBase64) {
+        const cleanBase64 = attachment.dataBase64.replace(/^data:[^;]+;base64,/, '');
+        promptPayload = [
+          { text: promptText },
+          {
+            inlineData: {
+              mimeType: attachment.type || 'image/jpeg',
+              data: cleanBase64,
+            },
+          },
+        ];
+      }
+
+      const geminiRes = await callGemini(geminiKey, promptPayload, false);
       if (!geminiRes.success) {
         return new Response(
           JSON.stringify({

@@ -5,6 +5,15 @@
 // ============================================================================
 
 import { getSupabaseClient } from '../supabase/client';
+import { languageRoutingService } from './languageRoutingService';
+
+export interface AiChatAttachment {
+  name: string;
+  type: string;
+  size: number;
+  dataBase64?: string;
+  textContent?: string;
+}
 
 export interface AiChatMessage {
   id: number;
@@ -415,18 +424,28 @@ class AiApiService {
   }
 
   /**
-   * Free-Question AI Tutor Chat (Unrestricted Chinese Learning Q&A)
+   * Free-Question AI Tutor Chat (Unrestricted Chinese Learning Q&A with File Attachment & Language Routing)
    */
   async sendFreeChatMessage(params: {
     question: string;
     history?: Array<{ sender: 'user' | 'ai'; text: string }>;
     contextItem?: any;
+    attachment?: AiChatAttachment | null;
+    preferredLanguage?: 'auto' | 'zh' | 'vi' | 'en';
   }): Promise<string> {
+    const routing = languageRoutingService.resolveLanguage(
+      params.question,
+      params.preferredLanguage
+    );
+
     const data = await this.invokeEdgeFunction({
       action: 'free-chat',
       question: params.question,
       history: params.history,
       contextItem: params.contextItem,
+      attachment: params.attachment,
+      targetLanguage: routing.targetResponseLanguage,
+      systemInstructionAddendum: routing.systemInstructionAddendum,
     });
 
     if (!data.success && data.error) {

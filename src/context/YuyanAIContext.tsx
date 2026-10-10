@@ -6,12 +6,14 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { VoiceSettings, DEFAULT_VOICE_SETTINGS } from '../services/speech/speechTypes';
-import { aiApiService } from '../services/ai/aiApiService';
+import { aiApiService, AiChatAttachment } from '../services/ai/aiApiService';
+import { speechSynthesisService } from '../services/speech/speechSynthesisService';
 
 export interface ChatMessage {
   id: number;
   sender: 'ai' | 'user';
   text: string;
+  attachment?: AiChatAttachment | null;
   pinyin?: string;
   vietnamese?: string;
   timestamp?: string;
@@ -38,7 +40,7 @@ interface YuyanAIContextValue {
   openLanguageModal: () => void;
   closeLanguageModal: () => void;
   updateVoiceSettings: (newSettings: Partial<VoiceSettings>) => void;
-  sendMessage: (text: string) => Promise<void>;
+  sendMessage: (text: string, attachment?: AiChatAttachment | null) => Promise<void>;
   clearMessages: () => void;
   isLoading: boolean;
 }
@@ -195,8 +197,8 @@ export const YuyanAIProvider: React.FC<{ children: React.ReactNode }> = ({ child
     ]);
   }, []);
 
-  const sendMessageInternal = async (text: string) => {
-    if (!text.trim() || isLoading) return;
+  const sendMessageInternal = async (text: string, attachment?: AiChatAttachment | null) => {
+    if ((!text.trim() && !attachment) || isLoading) return;
 
     const userText = text.trim();
     const nowTime = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
@@ -204,6 +206,7 @@ export const YuyanAIProvider: React.FC<{ children: React.ReactNode }> = ({ child
       id: Date.now(),
       sender: 'user',
       text: userText,
+      attachment: attachment || null,
       timestamp: nowTime,
     };
 
@@ -211,8 +214,16 @@ export const YuyanAIProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsLoading(true);
 
     try {
+      const recentHistory = messages.slice(-6).map((m) => ({
+        sender: m.sender,
+        text: m.text,
+      }));
+
       const reply = await aiApiService.sendFreeChatMessage({
         question: userText,
+        history: recentHistory,
+        attachment: attachment || null,
+        preferredLanguage: voiceSettings.preferredResponseLanguage,
       });
 
       const aiMsg: ChatMessage = {
@@ -222,6 +233,17 @@ export const YuyanAIProvider: React.FC<{ children: React.ReactNode }> = ({ child
         timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, aiMsg]);
+
+      // Auto-play AI response if enabled in voice settings
+      if (voiceSettings.ttsEnabled && voiceSettings.autoPlayResponses && reply) {
+        void speechSynthesisService.speakBilingual({
+          text: reply,
+          rate: voiceSettings.speechRate,
+          chineseVoiceUri: voiceSettings.chineseVoiceUri,
+          vietnameseVoiceUri: voiceSettings.vietnameseVoiceUri,
+          readingMode: voiceSettings.readingMode,
+        });
+      }
     } catch (err: any) {
       const errorMsg: ChatMessage = {
         id: Date.now() + 1,
@@ -236,10 +258,10 @@ export const YuyanAIProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const sendMessage = useCallback(
-    async (text: string) => {
-      await sendMessageInternal(text);
+    async (text: string, attachment?: AiChatAttachment | null) => {
+      await sendMessageInternal(text, attachment);
     },
-    [isLoading]
+    [isLoading, messages, voiceSettings]
   );
 
   return (

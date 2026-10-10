@@ -210,10 +210,12 @@ export function useVoiceConversation(options?: {
         // Speak AI Response
         if (settingsRef.current.ttsEnabled && aiReplyText) {
           setState('speaking');
-          await speechSynthesisService.speak({
+          await speechSynthesisService.speakBilingual({
             text: aiReplyText,
             rate: settingsRef.current.speechRate,
-            voiceURI: settingsRef.current.chineseVoiceUri,
+            chineseVoiceUri: settingsRef.current.chineseVoiceUri,
+            vietnameseVoiceUri: settingsRef.current.vietnameseVoiceUri,
+            readingMode: settingsRef.current.readingMode,
             onStart: () => {
               setState('speaking');
             },
@@ -256,20 +258,25 @@ export function useVoiceConversation(options?: {
   }, []);
 
   /**
-   * Replay last spoken AI response
+   * Replay last spoken AI response with optional custom reading mode
    */
-  const replayLastResponse = useCallback(async () => {
-    if (!lastAiResponse) return;
-    setState('speaking');
-    await speechSynthesisService.speak({
-      text: lastAiResponse,
-      rate: settings.speechRate,
-      voiceURI: settings.chineseVoiceUri,
-      onStart: () => setState('speaking'),
-      onEnd: () => setState('ready'),
-      onError: () => setState('ready'),
-    });
-  }, [lastAiResponse, settings.speechRate, settings.chineseVoiceUri]);
+  const replayLastResponse = useCallback(
+    async (customMode?: import('./speechTypes').ReadingMode) => {
+      if (!lastAiResponse) return;
+      setState('speaking');
+      await speechSynthesisService.speakBilingual({
+        text: lastAiResponse,
+        rate: settings.speechRate,
+        chineseVoiceUri: settings.chineseVoiceUri,
+        vietnameseVoiceUri: settings.vietnameseVoiceUri,
+        readingMode: customMode || settings.readingMode,
+        onStart: () => setState('speaking'),
+        onEnd: () => setState('ready'),
+        onError: () => setState('ready'),
+      });
+    },
+    [lastAiResponse, settings.speechRate, settings.chineseVoiceUri, settings.vietnameseVoiceUri, settings.readingMode]
+  );
 
   return {
     state,
