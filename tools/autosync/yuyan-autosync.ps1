@@ -50,17 +50,18 @@ Log-Message "===================================================================
 
 # 2. File Filtering & Security Rules
 $IgnoredPatterns = @(
-    "\\\.git\\",
-    "\\node_modules\\",
-    "\\dist\\",
-    "\\build\\",
-    "\\scratch\\",
-    "\\tools\\autosync\\",
-    "\\\.temp\\",
-    "\\backups\\",
+    "\\\.git($|\\)",
+    "\\node_modules($|\\)",
+    "\\dist($|\\)",
+    "\\build($|\\)",
+    "\\scratch($|\\)",
+    "\\tools\\autosync($|\\)",
+    "\\\.temp($|\\)",
+    "\\backups($|\\)",
     "\.log$",
     "\.pid$",
-    "\.tmp$"
+    "\.tmp$",
+    "~$"
 )
 
 $SecretPatterns = @(
@@ -127,15 +128,9 @@ function Invoke-Sync([System.Collections.Generic.HashSet[string]]$changedFiles) 
 
     Log-Message "Detected $($filesToStage.Count) changed file(s): $($filesToStage -join ', ')"
 
-    # Stage files safely
+    # Stage files safely using git add -A
     foreach ($f in $filesToStage) {
-        if (Test-Path $f) {
-            git add -- $f
-        } else {
-            # File was deleted/renamed
-            git rm --cached --ignore-unmatch -- $f 2>$null
-            git add -u -- $f 2>$null
-        }
+        git add -A -- $f 2>$null
     }
 
     $staged = (git diff --cached --name-only)
@@ -194,35 +189,24 @@ function Invoke-Sync([System.Collections.Generic.HashSet[string]]$changedFiles) 
     }
 }
 
-# 4. FileSystemWatcher Setup
-$watcher = New-Item -ItemType Object -TypeName System.IO.FileSystemWatcher
-$watcher.Path = $RepoPath
+# 4. FileSystemWatcher & Event Setup
+$global:yuyan_sync_queue = [System.Collections.Concurrent.ConcurrentQueue[string]]::new()
+$global:yuyan_last_event_time = [DateTime]::MinValue
+
+$watcher = New-Object System.IO.FileSystemWatcher $RepoPath
 $watcher.IncludeSubdirectories = $true
 $watcher.NotifyFilter = [System.IO.NotifyFilters]'FileName, LastWrite, CreationTime'
 $watcher.EnableRaisingEvents = $true
 
-$queue = [System.Collections.Generic.HashSet[string]]::new()
-$lastEventTime = [DateTime]::MinValue
-$lock = [System.Object]::new()
-
-$action = {
-    param($source, $eventArgs)
-    $path = $eventArgs.FullPath
-    if (-not (Is-Ignored $path)) {
-        [System.Threading.Monitor]::Enter($lock)
-        try {
-            $queue.Add($path) | Out-Null
-            $script:lastEventTime = [DateTime]::UtcNow
-        } finally {
-            [System.Threading.Monitor]::Exit($lock)
-        }
-    }
+$handler = {
+    $global:yuyan_sync_queue.Enqueue($EventArgs.FullPath)
+    $global:yuyan_last_event_time = [DateTime]::UtcNow
 }
 
-Register-ObjectEvent $watcher "Changed" -Action $action | Out-Null
-Register-ObjectEvent $watcher "Created" -Action $action | Out-Null
-Register-ObjectEvent $watcher "Deleted" -Action $action | Out-Null
-Register-ObjectEvent $watcher "Renamed" -Action $action | Out-Null
+$subCreated = Register-ObjectEvent -InputObject $watcher -EventName "Created" -Action $handler
+$subChanged = Register-ObjectEvent -InputObject $watcher -EventName "Changed" -Action $handler
+$subDeleted = Register-ObjectEvent -InputObject $watcher -EventName "Deleted" -Action $handler
+$subRenamed = Register-ObjectEvent -InputObject $watcher -EventName "Renamed" -Action $handler
 
 Log-Message "FileSystemWatcher registered. Listening for file changes..."
 
@@ -230,32 +214,36 @@ try {
     while ($true) {
         Start-Sleep -Milliseconds 500
 
-        $shouldSync = $false
-        $batch = @()
+        if ($global:yuyan_sync_queue.Count -gt 0) {
+            $elapsed = ([DateTime]::UtcNow - $global:yuyan_last_event_time).TotalSeconds
+            if ($elapsed -ge $DebounceSeconds) {
+                $rawItems = @()
+                $item = ""
+                while ($global:yuyan_sync_queue.TryDequeue([ref]$item)) {
+                    $rawItems += $item
+                }
 
-        [System.Threading.Monitor]::Enter($lock)
-        try {
-            if ($queue.Count -gt 0) {
-                $elapsed = ([DateTime]::UtcNow - $lastEventTime).TotalSeconds
-                if ($elapsed -ge $DebounceSeconds) {
-                    $batch = [string[]]$queue
-                    $queue.Clear()
-                    $shouldSync = $true
+                $filteredSet = [System.Collections.Generic.HashSet[string]]::new()
+                foreach ($raw in $rawItems) {
+                    if (-not (Is-Ignored $raw)) {
+                        $filteredSet.Add($raw) | Out-Null
+                    }
+                }
+
+                if ($filteredSet.Count -gt 0) {
+                    Invoke-Sync $filteredSet
                 }
             }
-        } finally {
-            [System.Threading.Monitor]::Exit($lock)
-        }
-
-        if ($shouldSync -and $batch.Count -gt 0) {
-            $set = [System.Collections.Generic.HashSet[string]]::new([string[]]$batch)
-            Invoke-Sync $set
         }
     }
 } finally {
     Log-Message "Shutting down watcher..."
     $watcher.EnableRaisingEvents = $false
     $watcher.Dispose()
+    Unregister-Event -SourceIdentifier $subCreated.Name -ErrorAction SilentlyContinue
+    Unregister-Event -SourceIdentifier $subChanged.Name -ErrorAction SilentlyContinue
+    Unregister-Event -SourceIdentifier $subDeleted.Name -ErrorAction SilentlyContinue
+    Unregister-Event -SourceIdentifier $subRenamed.Name -ErrorAction SilentlyContinue
     if (Test-Path $PidFile) {
         Remove-Item $PidFile -Force -ErrorAction SilentlyContinue
     }
