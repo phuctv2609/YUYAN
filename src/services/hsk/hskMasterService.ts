@@ -1,4 +1,5 @@
 import { getSupabaseClient, getLearnerSessionId } from '../supabase/client';
+import { learningProgressService } from '../progress/learningProgressService';
 
 export type HskFramework = 'hsk2' | 'hsk3';
 export type HskListType = 'exclusive' | 'inclusive';
@@ -210,6 +211,10 @@ class HskMasterService {
     if (error) {
       console.error('Error setting learner word status:', error);
       throw error;
+    }
+
+    if (status === 'learned') {
+      void learningProgressService.markWordLearned(simplified);
     }
 
     return data as { success: boolean; status: string };

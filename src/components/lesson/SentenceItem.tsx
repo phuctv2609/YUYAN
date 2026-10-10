@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Volume2, Mic, Star, User } from 'lucide-react';
 import { Sentence } from '../../data/hsk/types.ts';
 import { FontSize } from './StudyControls.tsx';
 import { useToast } from '../ui/Toast.tsx';
 import { audioManager } from '../../services/audio/index.ts';
 import { parseDialogueSentence } from '../../data/hsk/dialogueParser.ts';
+import { learningProgressService } from '../../services/progress/learningProgressService.ts';
 
 interface SentenceItemProps {
   sentence: Sentence;
@@ -25,8 +26,17 @@ export const SentenceItem: React.FC<SentenceItemProps> = ({
   showVietnamese,
   fontSize,
 }) => {
-  const [isBookmarked, setIsBookmarked] = useState(false);
+  const bookmarkKey = `sent_${sentence.hanzi.replace(/\s+/g, '')}`;
+  const [isBookmarked, setIsBookmarked] = useState(() => learningProgressService.isBookmarked(bookmarkKey));
   const { showToast } = useToast();
+
+  useEffect(() => {
+    setIsBookmarked(learningProgressService.isBookmarked(bookmarkKey));
+    const unsubscribe = learningProgressService.subscribe(() => {
+      setIsBookmarked(learningProgressService.isBookmarked(bookmarkKey));
+    });
+    return unsubscribe;
+  }, [bookmarkKey]);
 
   const parsed = parseDialogueSentence(sentence);
 
@@ -65,11 +75,12 @@ export const SentenceItem: React.FC<SentenceItemProps> = ({
     showToast('Tính năng nhận diện giọng nói và chấm điểm phát âm đang được tích hợp qua Web Speech API', 'info');
   };
 
-  const handleBookmarkToggle = (e: React.MouseEvent) => {
+  const handleBookmarkToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsBookmarked(!isBookmarked);
+    const nextBookmarked = await learningProgressService.toggleBookmark(bookmarkKey, 'sentence');
+    setIsBookmarked(nextBookmarked);
     showToast(
-      !isBookmarked ? `Đã lưu câu ${sentence.index} vào mục yêu thích` : `Đã bỏ lưu câu ${sentence.index}`,
+      nextBookmarked ? `Đã lưu câu ${sentence.index} vào mục yêu thích` : `Đã bỏ lưu câu ${sentence.index}`,
       'success'
     );
   };

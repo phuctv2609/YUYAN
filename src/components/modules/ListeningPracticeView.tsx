@@ -12,6 +12,7 @@ import { vocabularyRepository } from '../../data/repositories/vocabularyReposito
 import { audioManager } from '../../services/audio';
 import { mistakeRepository } from '../../data/repositories/mistakeRepository';
 import { progressRepository } from '../../data/repositories/progressRepository';
+import { learningProgressService } from '../../services/progress/learningProgressService';
 import { useToast } from '../ui/Toast';
 
 interface ListeningQuestion {
@@ -144,6 +145,12 @@ export const ListeningPracticeView: React.FC<{ onOpenLesson?: (lvl: number, num:
       setScore((prev) => prev + 1);
       showToast('Chính xác! Bạn nghe rất tốt.', 'success');
       progressRepository.addStudyMinutes(2, 'listening');
+      void learningProgressService.recordExerciseCompleted({
+        type: 'listening',
+        entityId: String(currentQ.id),
+        score: 100,
+        durationMinutes: 2,
+      });
     } else {
       showToast('Chưa chính xác. Đã lưu câu này vào Sổ tay câu sai.', 'warning');
       mistakeRepository.addMistake({

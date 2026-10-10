@@ -70,9 +70,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onStartLesson, onO
             </h1>
             <span className="text-2xl">👋</span>
           </div>
-          <p className="text-xs sm:text-sm text-text-secondary mt-0.5">
-            Mục tiêu hiện tại: HSK {profile.targetHskLevel} • {profile.dailyGoalMinutes} phút/ngày
-          </p>
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <span className="text-xs text-text-secondary">
+              Mục tiêu: HSK {profile.targetHskLevel} • {profile.dailyGoalMinutes} phút/ngày
+            </span>
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-primary-soft text-primary">
+              {stats.journeyStartDate ? `Hành trình: Ngày ${stats.journeyDay}` : 'Hành trình: Chưa bắt đầu'}
+            </span>
+          </div>
         </div>
 
         {mistakes.length > 0 && (
@@ -179,7 +184,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onStartLesson, onO
                   style={{
                     width: stats.completedLessons.includes(`hsk${currentResumeLesson?.level}-bai${String(currentResumeLesson?.lessonNumber).padStart(2, '0')}`)
                       ? '100%'
-                      : '35%',
+                      : '0%',
                   }}
                 />
               </div>
@@ -213,39 +218,47 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onStartLesson, onO
             </div>
 
             {/* Circular Metric */}
-            <div className="flex items-center gap-5 sm:gap-6 py-2">
-              <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 flex items-center justify-center">
-                <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                  <circle cx="18" cy="18" fill="none" r="15.915" stroke="currentColor" className="text-border-subtle" strokeWidth="3.5" />
-                  <circle
-                    cx="18"
-                    cy="18"
-                    fill="none"
-                    r="15.915"
-                    stroke="#FF4D6D"
-                    strokeDasharray={`${Math.min(100, stats.completedLessons.length * 10)}, 100`}
-                    strokeLinecap="round"
-                    strokeWidth="3.5"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                  <span className="text-lg sm:text-xl font-extrabold text-text-primary leading-none">
-                    {Math.min(100, stats.completedLessons.length * 10)}%
-                  </span>
-                  <span className="text-[9px] uppercase tracking-wider text-text-muted font-bold mt-0.5">
-                    HSK {profile.targetHskLevel}
-                  </span>
-                </div>
-              </div>
+            {(() => {
+              const targetCompleted = stats.completedLessons.filter((k) => k.startsWith(`hsk${profile.targetHskLevel}-`)).length;
+              const targetTotal = profile.targetHskLevel === 1 || profile.targetHskLevel === 2 ? 15 : profile.targetHskLevel === 3 || profile.targetHskLevel === 4 ? 20 : profile.targetHskLevel === 5 ? 36 : 40;
+              const targetPercent = Math.min(100, Math.round((targetCompleted / targetTotal) * 100));
 
-              <div>
-                <div className="text-sm sm:text-base font-bold text-text-primary">Mục tiêu HSK {profile.targetHskLevel}</div>
-                <p className="text-xs text-text-secondary mt-0.5">Đã hoàn thành {stats.completedLessons.length} bài học</p>
-                <span className="inline-block mt-2 text-xs text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/15 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                  {profile.levelAssessment}
-                </span>
-              </div>
-            </div>
+              return (
+                <div className="flex items-center gap-5 sm:gap-6 py-2">
+                  <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 flex items-center justify-center">
+                    <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                      <circle cx="18" cy="18" fill="none" r="15.915" stroke="currentColor" className="text-border-subtle" strokeWidth="3.5" />
+                      <circle
+                        cx="18"
+                        cy="18"
+                        fill="none"
+                        r="15.915"
+                        stroke="#FF4D6D"
+                        strokeDasharray={`${targetPercent}, 100`}
+                        strokeLinecap="round"
+                        strokeWidth="3.5"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                      <span className="text-lg sm:text-xl font-extrabold text-text-primary leading-none">
+                        {targetPercent}%
+                      </span>
+                      <span className="text-[9px] uppercase tracking-wider text-text-muted font-bold mt-0.5">
+                        HSK {profile.targetHskLevel}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-sm sm:text-base font-bold text-text-primary">Mục tiêu HSK {profile.targetHskLevel}</div>
+                    <p className="text-xs text-text-secondary mt-0.5">Đã hoàn thành {targetCompleted}/{targetTotal} bài học</p>
+                    <span className="inline-block mt-2 text-xs text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/15 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                      {targetPercent >= 100 ? 'Đã thành thạo cấp độ' : `${stats.totalCompletedLessons} / 146 bài toàn khóa`}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Telemetry Badges */}
@@ -256,7 +269,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onStartLesson, onO
               </div>
               <div>
                 <div className="text-sm sm:text-base font-bold text-text-primary leading-tight">
-                  {profile.studyStreakDays}
+                  {stats.currentStreak}
                 </div>
                 <div className="text-[11px] text-text-muted">Ngày liên tiếp</div>
               </div>

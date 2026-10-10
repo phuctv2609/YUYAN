@@ -14,15 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_word_usage_cache: {
+        Row: {
+          context_hash: string
+          created_at: string
+          explanation_json: Json
+          id: string
+          prompt_version: string
+          updated_at: string
+          word: string
+        }
+        Insert: {
+          context_hash: string
+          created_at?: string
+          explanation_json: Json
+          id?: string
+          prompt_version: string
+          updated_at?: string
+          word: string
+        }
+        Update: {
+          context_hash?: string
+          created_at?: string
+          explanation_json?: Json
+          id?: string
+          prompt_version?: string
+          updated_at?: string
+          word?: string
+        }
+        Relationships: []
+      }
       canonical_hanzi: {
         Row: {
           char: string
           created_at: string | null
           decomposition: string | null
+          han_viet: string | null
           hsk_levels: number[]
           meanings: string[]
           mnemonic: string | null
           pinyin: string[]
+          pinyin_search: string | null
           radical_number: number
           stroke_count: number
           stroke_data: Json
@@ -35,10 +67,12 @@ export type Database = {
           char: string
           created_at?: string | null
           decomposition?: string | null
+          han_viet?: string | null
           hsk_levels?: number[]
           meanings: string[]
           mnemonic?: string | null
           pinyin: string[]
+          pinyin_search?: string | null
           radical_number: number
           stroke_count: number
           stroke_data?: Json
@@ -51,10 +85,12 @@ export type Database = {
           char?: string
           created_at?: string | null
           decomposition?: string | null
+          han_viet?: string | null
           hsk_levels?: number[]
           meanings?: string[]
           mnemonic?: string | null
           pinyin?: string[]
+          pinyin_search?: string | null
           radical_number?: number
           stroke_count?: number
           stroke_data?: Json
@@ -72,6 +108,69 @@ export type Database = {
             referencedColumns: ["radical_number"]
           },
         ]
+      }
+      dictionary_entries: {
+        Row: {
+          content_hash: string | null
+          created_at: string | null
+          has_english_leakage: boolean
+          id: string
+          imported_at: string | null
+          meanings_text: string
+          meanings_vi: Json
+          pinyin: string
+          pinyin_normalized: string
+          quality_status: string
+          simplified: string
+          source_commit: string
+          source_key: string
+          source_license: string
+          source_name: string
+          source_url: string
+          traditional: string
+          updated_at: string | null
+        }
+        Insert: {
+          content_hash?: string | null
+          created_at?: string | null
+          has_english_leakage?: boolean
+          id?: string
+          imported_at?: string | null
+          meanings_text?: string
+          meanings_vi?: Json
+          pinyin: string
+          pinyin_normalized: string
+          quality_status?: string
+          simplified: string
+          source_commit?: string
+          source_key: string
+          source_license?: string
+          source_name?: string
+          source_url?: string
+          traditional: string
+          updated_at?: string | null
+        }
+        Update: {
+          content_hash?: string | null
+          created_at?: string | null
+          has_english_leakage?: boolean
+          id?: string
+          imported_at?: string | null
+          meanings_text?: string
+          meanings_vi?: Json
+          pinyin?: string
+          pinyin_normalized?: string
+          quality_status?: string
+          simplified?: string
+          source_commit?: string
+          source_key?: string
+          source_license?: string
+          source_name?: string
+          source_url?: string
+          traditional?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       dictionary_external_cache: {
         Row: {
@@ -203,6 +302,86 @@ export type Database = {
           },
         ]
       }
+      grammar_patterns: {
+        Row: {
+          created_at: string
+          examples: Json
+          explanation: string
+          hsk_level: number
+          id: string
+          lesson_id: string | null
+          notes: string | null
+          pattern: string
+          sort_order: number
+          structure_summary: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          examples?: Json
+          explanation: string
+          hsk_level: number
+          id: string
+          lesson_id?: string | null
+          notes?: string | null
+          pattern: string
+          sort_order?: number
+          structure_summary?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          examples?: Json
+          explanation?: string
+          hsk_level?: number
+          id?: string
+          lesson_id?: string | null
+          notes?: string | null
+          pattern?: string
+          sort_order?: number
+          structure_summary?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      hsk_learner_progress: {
+        Row: {
+          entry_id: string
+          id: string
+          learner_id: string
+          notes: string | null
+          simplified: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          entry_id: string
+          id?: string
+          learner_id: string
+          notes?: string | null
+          simplified: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          entry_id?: string
+          id?: string
+          learner_id?: string
+          notes?: string | null
+          simplified?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hsk_learner_progress_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "hsk_master_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hsk_lessons: {
         Row: {
           created_at: string | null
@@ -267,6 +446,116 @@ export type Database = {
           total_lessons?: number
         }
         Relationships: []
+      }
+      hsk_master_entries: {
+        Row: {
+          classifiers: string[] | null
+          confidence: number
+          created_at: string
+          frequency: number | null
+          id: string
+          localization_method: string | null
+          meanings_en: Json
+          meanings_vi: Json
+          pinyin: string
+          pinyin_numeric: string | null
+          pos: string[] | null
+          pos_vi: string[] | null
+          radical: string | null
+          review_status: string
+          reviewed_at: string | null
+          reviewer: string | null
+          simplified: string
+          source_commit: string
+          traditional: string | null
+        }
+        Insert: {
+          classifiers?: string[] | null
+          confidence?: number
+          created_at?: string
+          frequency?: number | null
+          id?: string
+          localization_method?: string | null
+          meanings_en?: Json
+          meanings_vi?: Json
+          pinyin: string
+          pinyin_numeric?: string | null
+          pos?: string[] | null
+          pos_vi?: string[] | null
+          radical?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewer?: string | null
+          simplified: string
+          source_commit?: string
+          traditional?: string | null
+        }
+        Update: {
+          classifiers?: string[] | null
+          confidence?: number
+          created_at?: string
+          frequency?: number | null
+          id?: string
+          localization_method?: string | null
+          meanings_en?: Json
+          meanings_vi?: Json
+          pinyin?: string
+          pinyin_numeric?: string | null
+          pos?: string[] | null
+          pos_vi?: string[] | null
+          radical?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewer?: string | null
+          simplified?: string
+          source_commit?: string
+          traditional?: string | null
+        }
+        Relationships: []
+      }
+      hsk_memberships: {
+        Row: {
+          created_at: string
+          entry_id: string
+          framework: string
+          id: string
+          is_exclusive: boolean
+          is_inclusive: boolean
+          level_code: string
+          level_number: number
+          simplified: string
+        }
+        Insert: {
+          created_at?: string
+          entry_id: string
+          framework: string
+          id?: string
+          is_exclusive?: boolean
+          is_inclusive?: boolean
+          level_code: string
+          level_number: number
+          simplified: string
+        }
+        Update: {
+          created_at?: string
+          entry_id?: string
+          framework?: string
+          id?: string
+          is_exclusive?: boolean
+          is_inclusive?: boolean
+          level_code?: string
+          level_number?: number
+          simplified?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hsk_memberships_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "hsk_master_entries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       hsk_vocabulary: {
         Row: {
@@ -399,32 +688,50 @@ export type Database = {
       }
       learner_profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string | null
           daily_goal_minutes: number
           display_name: string
           id: string
+          journey_start_date: string | null
+          last_study_date: string | null
+          longest_streak: number | null
+          school_email: string | null
           streak_days: number
           target_hsk_level: number
+          total_active_days: number | null
           total_study_minutes: number
           updated_at: string | null
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string | null
           daily_goal_minutes?: number
           display_name?: string
           id: string
+          journey_start_date?: string | null
+          last_study_date?: string | null
+          longest_streak?: number | null
+          school_email?: string | null
           streak_days?: number
           target_hsk_level?: number
+          total_active_days?: number | null
           total_study_minutes?: number
           updated_at?: string | null
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string | null
           daily_goal_minutes?: number
           display_name?: string
           id?: string
+          journey_start_date?: string | null
+          last_study_date?: string | null
+          longest_streak?: number | null
+          school_email?: string | null
           streak_days?: number
           target_hsk_level?: number
+          total_active_days?: number | null
           total_study_minutes?: number
           updated_at?: string | null
         }
@@ -890,6 +1197,7 @@ export type Database = {
           lesson_number: number
           level: number
           pinyin: string
+          repair_provenance: Json | null
           title: string
           vietnamese: string
           vocabulary_reappeared: string | null
@@ -902,6 +1210,7 @@ export type Database = {
           lesson_number: number
           level: number
           pinyin: string
+          repair_provenance?: Json | null
           title: string
           vietnamese: string
           vocabulary_reappeared?: string | null
@@ -914,6 +1223,7 @@ export type Database = {
           lesson_number?: number
           level?: number
           pinyin?: string
+          repair_provenance?: Json | null
           title?: string
           vietnamese?: string
           vocabulary_reappeared?: string | null
@@ -1146,6 +1456,7 @@ export type Database = {
           han_viet: string | null
           hanzi: string
           id: string
+          industry: string | null
           is_duplicate_secondary: boolean
           level: string | null
           part_of_speech: string | null
@@ -1190,6 +1501,7 @@ export type Database = {
           han_viet?: string | null
           hanzi: string
           id: string
+          industry?: string | null
           is_duplicate_secondary?: boolean
           level?: string | null
           part_of_speech?: string | null
@@ -1234,6 +1546,7 @@ export type Database = {
           han_viet?: string | null
           hanzi?: string
           id?: string
+          industry?: string | null
           is_duplicate_secondary?: boolean
           level?: string | null
           part_of_speech?: string | null
@@ -1272,6 +1585,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      study_activity_logs: {
+        Row: {
+          activity_date: string
+          activity_type: string
+          created_at: string | null
+          duration_seconds: number | null
+          entity_id: string | null
+          id: string
+          score: number | null
+          user_id: string
+        }
+        Insert: {
+          activity_date: string
+          activity_type: string
+          created_at?: string | null
+          duration_seconds?: number | null
+          entity_id?: string | null
+          id?: string
+          score?: number | null
+          user_id: string
+        }
+        Update: {
+          activity_date?: string
+          activity_type?: string
+          created_at?: string | null
+          duration_seconds?: number | null
+          entity_id?: string | null
+          id?: string
+          score?: number | null
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
@@ -1593,32 +1939,87 @@ export type Database = {
       }
     }
     Functions: {
-      search_dictionary:
-        | {
-            Args: { p_limit?: number; p_query: string }
-            Returns: {
-              category_id: string
-              category_name_vi: string
-              definition_vi: string
-              domain_id: string
-              domain_name_vi: string
-              hanzi: string
-              hsk_level: number
-              part_of_speech: string
-              pinyin: string
-              sample_sentence_pinyin: string
-              sample_sentence_vi: string
-              sample_sentence_zh: string
-              source: string
-              source_id: string
-              traditional: string
-              vietnamese: string
-            }[]
-          }
-        | {
-            Args: { p_limit?: number; p_offset?: number; p_query: string }
-            Returns: Json
-          }
+      get_dictionary_word_detail: { Args: { p_id: string }; Returns: Json }
+      get_hsk_word_master_detail: {
+        Args: { p_entry_id: string; p_learner_id?: string }
+        Returns: Json
+      }
+      search_cvdict_entries: {
+        Args: { p_limit?: number; p_offset?: number; p_query: string }
+        Returns: {
+          has_english_leakage: boolean
+          id: string
+          meanings_vi: Json
+          pinyin: string
+          pinyin_normalized: string
+          quality_status: string
+          score: number
+          simplified: string
+          source_license: string
+          source_name: string
+          total_count: number
+          traditional: string
+        }[]
+      }
+      search_dictionary: {
+        Args: { p_limit?: number; p_offset?: number; p_query: string }
+        Returns: Json
+      }
+      search_hanzi_master: {
+        Args: {
+          p_hsk_level?: number
+          p_limit?: number
+          p_max_strokes?: number
+          p_min_strokes?: number
+          p_offset?: number
+          p_query?: string
+          p_radical?: number
+        }
+        Returns: Json
+      }
+      search_hsk_master_words: {
+        Args: {
+          p_framework?: string
+          p_learner_id?: string
+          p_level_code?: string
+          p_limit?: number
+          p_list_type?: string
+          p_offset?: number
+          p_pos?: string
+          p_query?: string
+          p_radical?: string
+          p_status?: string
+        }
+        Returns: {
+          classifiers: string[]
+          confidence: number
+          frequency: number
+          id: string
+          learner_status: string
+          levels_summary: Json
+          meanings_en: Json
+          meanings_vi: Json
+          pinyin: string
+          pinyin_numeric: string
+          pos: string[]
+          pos_vi: string[]
+          radical: string
+          review_status: string
+          simplified: string
+          total_count: number
+          traditional: string
+        }[]
+      }
+      set_hsk_learner_word_status: {
+        Args: {
+          p_entry_id: string
+          p_learner_id: string
+          p_notes?: string
+          p_simplified: string
+          p_status: string
+        }
+        Returns: Json
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
     }

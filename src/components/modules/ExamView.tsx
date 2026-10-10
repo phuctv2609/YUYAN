@@ -15,6 +15,7 @@ import {
 import { useToast } from '../ui/Toast.tsx';
 import { examRepository, ExamQuestion, ExamAttemptRecord } from '../../data/repositories';
 import { audioManager } from '../../services/audio/audioManager';
+import { learningProgressService } from '../../services/progress/learningProgressService';
 
 interface HskLevelConfig {
   durationMinutes: number;
@@ -128,12 +129,19 @@ export const ExamView: React.FC = () => {
       }
     });
     const finalScore = Math.round((correct / (questions.length || 1)) * currentConfig.maxScore);
+    const spentSecs = Math.max(60, totalTimeSeconds - timeLeft);
     await examRepository.saveAttempt({
       hskLevel: selectedLevel,
       score: finalScore,
       totalQuestions: questions.length,
-      timeSpentSeconds: totalTimeSeconds - timeLeft,
+      timeSpentSeconds: spentSecs,
       answers: userAnswers,
+    });
+    void learningProgressService.recordQualifyingActivity({
+      activityType: 'exam_attempt',
+      entityId: `exam_hsk${selectedLevel}`,
+      score: finalScore,
+      durationSeconds: spentSecs,
     });
     const updated = await examRepository.getAttempts(selectedLevel);
     setPastAttempts(updated);

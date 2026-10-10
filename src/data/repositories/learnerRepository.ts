@@ -31,6 +31,8 @@ export type LearnerProfile = StudentProfile;
 const STORAGE_KEY = 'yuyan_learner_profile_v2';
 const LEGACY_STORAGE_KEY = 'yuyan_learner_profile_v1';
 
+import { learningProgressService } from '../../services/progress/learningProgressService.ts';
+
 const DEFAULT_PROFILE: StudentProfile = {
   id: 'yuyan_std_001',
   displayName: 'Minh Anh',
@@ -38,7 +40,7 @@ const DEFAULT_PROFILE: StudentProfile = {
   schoolEmail: 'minhanh@yuyan.edu.vn',
   targetHskLevel: 2,
   dailyGoalMinutes: 30,
-  studyStreakDays: 320,
+  studyStreakDays: 0,
   levelAssessment: 'Sơ cấp (HSK 2)',
   createdAt: '2025-11-15T08:00:00.000Z',
   updatedAt: new Date().toISOString(),
@@ -105,6 +107,20 @@ export class LearnerRepository {
 
   constructor() {
     this.profile = this.loadProfile();
+    learningProgressService.subscribe((snapshot) => {
+      this.profile = {
+        ...this.profile,
+        displayName: snapshot.displayName || this.profile.displayName,
+        name: snapshot.displayName || this.profile.name,
+        schoolEmail: snapshot.schoolEmail || this.profile.schoolEmail,
+        avatar: snapshot.avatar !== undefined ? snapshot.avatar : this.profile.avatar,
+        targetHskLevel: snapshot.targetHskLevel || this.profile.targetHskLevel,
+        dailyGoalMinutes: snapshot.dailyGoalMinutes || this.profile.dailyGoalMinutes,
+        studyStreakDays: snapshot.currentStreak,
+        lastStudiedLesson: snapshot.lastStudiedLesson || this.profile.lastStudiedLesson,
+      };
+      this.notify();
+    });
   }
 
   public getProfile(): StudentProfile {

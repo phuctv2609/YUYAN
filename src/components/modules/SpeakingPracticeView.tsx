@@ -3,6 +3,7 @@ import { Mic, Square, Play, Pause, RotateCcw, Volume2, AlertCircle, CheckCircle2
 import { useToast } from '../ui/Toast.tsx';
 import { audioManager } from '../../services/audio/index.ts';
 import { lessonRepository } from '../../data/repositories';
+import { learningProgressService } from '../../services/progress/learningProgressService';
 
 type SpeakingState = 'READY' | 'PERMISSION' | 'LISTENING' | 'PROCESSING' | 'RESULT' | 'ERROR';
 
@@ -146,6 +147,11 @@ export const SpeakingPracticeView: React.FC = () => {
           setAudioUrl(url);
           setState('RESULT');
           showToast('Đã thu âm xong câu luyện nói!', 'success');
+          void learningProgressService.recordExerciseCompleted({
+            type: 'speaking',
+            entityId: selectedSentence.id,
+            durationMinutes: 1,
+          });
         }, 600);
       };
 

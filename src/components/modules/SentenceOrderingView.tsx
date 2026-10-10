@@ -11,6 +11,7 @@ import { lessonRepository } from '../../data/hsk/lessonRepository';
 import { audioManager } from '../../services/audio';
 import { mistakeRepository } from '../../data/repositories/mistakeRepository';
 import { progressRepository } from '../../data/repositories/progressRepository';
+import { learningProgressService } from '../../services/progress/learningProgressService';
 import { useToast } from '../ui/Toast';
 
 interface OrderingExercise {
@@ -110,6 +111,12 @@ export const SentenceOrderingView: React.FC = () => {
     if (correct) {
       showToast('Hoàn toàn chính xác! Ngữ pháp rất chuẩn.', 'success');
       progressRepository.addStudyMinutes(1, 'general');
+      void learningProgressService.recordExerciseCompleted({
+        type: 'grammar',
+        entityId: String(currentExercise.id),
+        score: 100,
+        durationMinutes: 1,
+      });
     } else {
       showToast('Thứ tự chưa đúng. Hãy xem câu mẫu và thử lại!', 'warning');
       mistakeRepository.addMistake({

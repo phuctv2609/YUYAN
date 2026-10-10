@@ -12,6 +12,7 @@ import { useToast } from '../ui/Toast.tsx';
 import { HanziStrokeWriter } from '../hanzi/HanziStrokeWriter.tsx';
 import { hanziRepository } from '../../data/repositories';
 import { audioManager } from '../../services/audio/audioManager';
+import { learningProgressService } from '../../services/progress/learningProgressService';
 
 interface Character {
   hanzi: string;
@@ -178,6 +179,7 @@ export const WritingPracticeView: React.FC = () => {
               character={selectedChar.hanzi}
               size={280}
               onCompleteQuiz={(summary) => {
+                void learningProgressService.markHanziMastered(selectedChar.hanzi);
                 showToast(
                   `Tuyệt vời! Bạn đã hoàn thành chữ "${selectedChar.hanzi}" (${summary.totalMistakes} lỗi).`,
                   'success'

@@ -3,6 +3,7 @@ import { Search, Volume2, Star, Check, Sparkles, Filter, AlertCircle, BookOpen }
 import { LessonVocabulary, RawVocabularyItem } from '../../data/hsk/types.ts';
 import { useToast } from '../ui/Toast.tsx';
 import { audioManager } from '../../services/audio/index.ts';
+import { learningProgressService } from '../../services/progress/learningProgressService.ts';
 
 interface VocabularyViewProps {
   level: number;
@@ -21,7 +22,10 @@ export const VocabularyView: React.FC<VocabularyViewProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [debouncedQuery, setDebouncedQuery] = useState<string>('');
   const [selectedPos, setSelectedPos] = useState<string>('all');
-  const [savedWords, setSavedWords] = useState<Set<string>>(new Set());
+  const [savedWords, setSavedWords] = useState<Set<string>>(() => {
+    const snap = learningProgressService.getSnapshot();
+    return new Set([...snap.bookmarkedIds, ...snap.learnedWords]);
+  });
   const [copiedWord, setCopiedWord] = useState<string | null>(null);
 
   // Debounce search query by 280ms
@@ -71,18 +75,20 @@ export const VocabularyView: React.FC<VocabularyViewProps> = ({
     });
   }, [items, debouncedQuery, selectedPos]);
 
-  const handleToggleSave = (hanzi: string) => {
-    setSavedWords((prev) => {
-      const next = new Set(prev);
-      if (next.has(hanzi)) {
+  const handleToggleSave = async (hanzi: string) => {
+    const isNowBookmarked = await learningProgressService.toggleBookmark(hanzi, 'vocab');
+    if (isNowBookmarked) {
+      void learningProgressService.markWordLearned(hanzi);
+      setSavedWords((prev) => new Set([...prev, hanzi]));
+      showToast(`Đã lưu từ "${hanzi}" vào sổ từ vựng`, 'success');
+    } else {
+      setSavedWords((prev) => {
+        const next = new Set(prev);
         next.delete(hanzi);
-        showToast(`Đã bỏ lưu từ "${hanzi}"`, 'info');
-      } else {
-        next.add(hanzi);
-        showToast(`Đã lưu từ "${hanzi}" vào sổ từ vựng`, 'success');
-      }
-      return next;
-    });
+        return next;
+      });
+      showToast(`Đã bỏ lưu từ "${hanzi}"`, 'info');
+    }
   };
 
   const handleCopy = (text: string) => {
