@@ -9,32 +9,40 @@ import {
   OFFICIAL_EXAM_PAPERS,
   OFFICIAL_EXAM_SOURCES,
   getExamCoverageSummary,
-  ExamPaperMetadata,
 } from '../exam/examPapersInventory';
+import {
+  EXAM_PAPER_CATALOG,
+  getExamPapersByLevel,
+  getExamPaperById,
+} from '../exam/examPaperCatalog';
+import {
+  MASTER_EXAM_QUESTION_BANK,
+  getQuestionsByPaperId,
+  getQuestionsByVersionAndLevel,
+} from '../exam/examQuestionBank';
+import { examIngestionService } from '../exam/examIngestionService';
+import { HSK_SOURCE_REGISTRY } from '../exam/examSourceRegistry';
+import {
+  HskExamVersion,
+  ExamSectionId,
+  ExamQuestionType,
+  ExamQuestion,
+  ExamSectionConfig,
+  ExamAttemptRecord,
+  ActiveExamSession,
+  ExamPaperMetadata,
+} from '../exam/examTypes';
 
-export type HskExamVersion = 'hsk2' | 'hsk3';
-export type ExamSectionId = 'listening' | 'reading' | 'writing';
-
-export interface ExamQuestion {
-  id: number;
-  hskVersion: HskExamVersion;
-  hskLevel: number;
-  section: ExamSectionId;
-  question: string;
-  type: 'hanzi_pinyin' | 'meaning' | 'fill' | 'reading' | 'listening' | 'writing';
-  audioPrompt?: string; // Text to be vocalized for listening items
-  options: string[];
-  correctAnswer: number;
-  explanation: string;
-}
-
-export interface ExamSectionConfig {
-  id: ExamSectionId;
-  title: string;
-  questionCount: number;
-  durationMinutes: number;
-  maxScore: number;
-}
+export type {
+  HskExamVersion,
+  ExamSectionId,
+  ExamQuestionType,
+  ExamQuestion,
+  ExamSectionConfig,
+  ExamAttemptRecord,
+  ActiveExamSession,
+  ExamPaperMetadata,
+};
 
 export interface ExamTemplateConfig {
   version: HskExamVersion;
@@ -46,31 +54,6 @@ export interface ExamTemplateConfig {
   passingScore: number;
   maxScore: number;
   sections: ExamSectionConfig[];
-}
-
-export interface ExamAttemptRecord {
-  id?: string;
-  userId: string;
-  hskVersion: HskExamVersion;
-  hskLevel: number;
-  score: number;
-  sectionScores?: Record<ExamSectionId, number>;
-  totalQuestions: number;
-  timeSpentSeconds: number;
-  answers: Record<number, number>;
-  passed: boolean;
-  createdAt?: string;
-}
-
-export interface ActiveExamSession {
-  version: HskExamVersion;
-  level: number;
-  startedAt: number;
-  durationSeconds: number;
-  timeLeft: number;
-  currentQuestionIndex: number;
-  answers: Record<number, number>;
-  flaggedQuestionIds: number[];
 }
 
 export const EXAM_TEMPLATES: Record<HskExamVersion, Record<number, ExamTemplateConfig>> = {
@@ -272,253 +255,7 @@ export const EXAM_TEMPLATES: Record<HskExamVersion, Record<number, ExamTemplateC
 };
 
 // Authoritative Questions Dataset across HSK 2.0 & HSK 3.0
-export const MASTER_EXAM_QUESTIONS: ExamQuestion[] = [
-  // HSK 2.0 Level 1
-  {
-    id: 101,
-    hskVersion: 'hsk2',
-    hskLevel: 1,
-    section: 'listening',
-    question: '[Nghe hiểu] Người nói nói câu: "你好！很高兴认识你。"',
-    audioPrompt: '你好！很高兴认识你。',
-    type: 'listening',
-    options: ['Xin chào, rất vui được gặp bạn.', 'Tạm biệt, hẹn gặp lại ngày mai.', 'Cảm ơn bạn rất nhiều.', 'Tôi là người Việt Nam.'],
-    correctAnswer: 0,
-    explanation: '"很高兴认识你" là khẩu ngữ chào hỏi lịch sự: Rất vui được làm quen với bạn.',
-  },
-  {
-    id: 102,
-    hskVersion: 'hsk2',
-    hskLevel: 1,
-    section: 'listening',
-    question: '[Nghe hiểu] Người nói nói: "他今天不去看电影。"',
-    audioPrompt: '他今天不去看电影。',
-    type: 'listening',
-    options: ['Hôm nay anh ấy đi xem phim.', 'Hôm nay anh ấy không đi xem phim.', 'Anh ấy muốn đi xem phim ngày mai.', 'Anh ấy thích xem phim.'],
-    correctAnswer: 1,
-    explanation: 'Có phó từ phủ định "不" trước cụm động từ "去 看 电影".',
-  },
-  {
-    id: 103,
-    hskVersion: 'hsk2',
-    hskLevel: 1,
-    section: 'reading',
-    question: 'Chọn câu trả lời logic cho câu hỏi: "你是哪国人？"',
-    type: 'reading',
-    options: ['我是越南人。', '我很好，谢谢。', '他是我的汉语老师。', '我不去学校。'],
-    correctAnswer: 0,
-    explanation: '"你是哪国人？" hỏi về quốc tịch, câu trả lời phù hợp là "我是越南人。"',
-  },
-  {
-    id: 104,
-    hskVersion: 'hsk2',
-    hskLevel: 1,
-    section: 'reading',
-    question: 'Điền từ thích hợp vào chỗ trống: "桌子上有一____书。"',
-    type: 'fill',
-    options: ['本', '张', '个', '只'],
-    correctAnswer: 0,
-    explanation: 'Lượng từ của sách báo, từ điển là "本" (běn).',
-  },
-
-  // HSK 2.0 Level 2
-  {
-    id: 201,
-    hskVersion: 'hsk2',
-    hskLevel: 2,
-    section: 'listening',
-    question: '[Nghe hiểu] "九月去北京旅游最好，天气不冷也不热。"',
-    audioPrompt: '九月去北京旅游最好，天气不冷也不热。',
-    type: 'listening',
-    options: ['Tháng chín đi Bắc Kinh du lịch là tốt nhất.', 'Tháng chín thời tiết Bắc Kinh rất lạnh.', 'Mùa hè đi Bắc Kinh rất nóng.', 'Tôi không thích đi Bắc Kinh.'],
-    correctAnswer: 0,
-    explanation: 'Người nói nêu rõ "九月去北京旅游最好".',
-  },
-  {
-    id: 202,
-    hskVersion: 'hsk2',
-    hskLevel: 2,
-    section: 'reading',
-    question: 'Điền từ: "哥哥比我____两岁。"',
-    type: 'fill',
-    options: ['大', '高', '长', '多'],
-    correctAnswer: 0,
-    explanation: 'So sánh tuổi tác trong tiếng Trung dùng "大" (lớn hơn) hoặc "小" (nhỏ hơn).',
-  },
-
-  // HSK 2.0 Level 3
-  {
-    id: 301,
-    hskVersion: 'hsk2',
-    hskLevel: 3,
-    section: 'listening',
-    question: '[Nghe hiểu] "请你把门关上，外边风太大了。"',
-    audioPrompt: '请你把门关上，外边风太大了。',
-    type: 'listening',
-    options: ['Xin hãy mở cửa sổ ra.', 'Xin hãy đóng cửa lại vì gió to.', 'Bên ngoài trời đang mưa to.', 'Hãy ra ngoài đón khách.'],
-    correctAnswer: 1,
-    explanation: 'Câu chữ 把: "把门关上" nghĩa là đóng cửa lại.',
-  },
-  {
-    id: 302,
-    hskVersion: 'hsk2',
-    hskLevel: 3,
-    section: 'writing',
-    question: 'Sắp xếp thành câu đúng: "这本 / 我 / 看完 / 小说 / 已经 / 了"',
-    type: 'writing',
-    options: [
-      '我已经看完这本小说了。',
-      '我这本看完已经小说了。',
-      '这本小说我已经了看完。',
-      '我已经小说看完了这本。',
-    ],
-    correctAnswer: 0,
-    explanation: 'Trật tự chuẩn: Chủ ngữ (我) + Phó từ thời gian (已经) + Vị ngữ động từ (看完) + Tân ngữ (这本小说) + 了.',
-  },
-
-  // HSK 2.0 Level 4
-  {
-    id: 401,
-    hskVersion: 'hsk2',
-    hskLevel: 4,
-    section: 'reading',
-    question: 'Chọn liên từ thích hợp: "他____聪明，____十分勤奋。"',
-    type: 'fill',
-    options: ['不但...而且...', '虽然...但是...', '既然...就...', '哪怕...也...'],
-    correctAnswer: 0,
-    explanation: '"不但...而且..." biểu thị quan hệ tăng tiến (không những... mà còn...).',
-  },
-  {
-    id: 402,
-    hskVersion: 'hsk2',
-    hskLevel: 4,
-    section: 'writing',
-    question: 'Điền bổ ngữ khả năng: "这篇文章字太小，我____。"',
-    type: 'fill',
-    options: ['看不清楚', '看清楚不', '看不懂了', '看得很清'],
-    correctAnswer: 0,
-    explanation: 'Dạng phủ định của bổ ngữ khả năng là V + 不 + Bổ ngữ kết quả: "看不清楚" (nhìn không rõ).',
-  },
-
-  // HSK 2.0 Level 5
-  {
-    id: 501,
-    hskVersion: 'hsk2',
-    hskLevel: 5,
-    section: 'reading',
-    question: 'Chọn từ chính xác: "只有经过反复推敲，这个方案____具备可行性。"',
-    type: 'fill',
-    options: ['才', '就', '便', '即'],
-    correctAnswer: 0,
-    explanation: '"只有...才..." biểu thị điều kiện tất yếu duy nhất.',
-  },
-
-  // HSK 2.0 Level 6
-  {
-    id: 601,
-    hskVersion: 'hsk2',
-    hskLevel: 6,
-    section: 'reading',
-    question: 'Chọn thành ngữ phù hợp: "多年来他对待科研工作一向____，不敢有半点马虎。"',
-    type: 'reading',
-    options: ['兢兢业业', '络绎不绝', '浮光掠影', '微不足道'],
-    correctAnswer: 0,
-    explanation: '"兢兢业业" diễn tả thái độ cẩn trọng, tận tụy hết lòng với công việc.',
-  },
-
-  // ==========================================
-  // HSK 3.0 MODERN SPECIFICATION (GF0025-2021)
-  // ==========================================
-  {
-    id: 701,
-    hskVersion: 'hsk3',
-    hskLevel: 1,
-    section: 'listening',
-    question: '[Nghe hiểu GF0025-2021] "学校前面有一家书店。"',
-    audioPrompt: '学校前面有一家书店。',
-    type: 'listening',
-    options: ['Phía trước trường học có một hiệu sách.', 'Hiệu sách ở phía sau trường học.', 'Trường học ở bên trong công viên.', 'Hiệu sách mở cửa lúc tám giờ.'],
-    correctAnswer: 0,
-    explanation: 'Phương vị từ: "前面" (phía trước). "学校前面" = phía trước trường.',
-  },
-  {
-    id: 702,
-    hskVersion: 'hsk3',
-    hskLevel: 1,
-    section: 'reading',
-    question: 'Chọn đại từ nghi vấn thích hợp: "你想喝____？咖啡还是茶？"',
-    type: 'fill',
-    options: ['什么', '怎么', '哪儿', '多少'],
-    correctAnswer: 0,
-    explanation: 'Hỏi về sự vật, đồ uống dùng đại từ nghi vấn "什么" (gì/cái gì).',
-  },
-  {
-    id: 703,
-    hskVersion: 'hsk3',
-    hskLevel: 2,
-    section: 'reading',
-    question: 'Chọn trợ từ động thái phù hợp: "中国京剧我听____一次，很有特色。"',
-    type: 'fill',
-    options: ['过', '了', '着', '得'],
-    correctAnswer: 0,
-    explanation: 'Biểu thị trải nghiệm đã từng diễn ra trong quá khứ, dùng "过" (guo).',
-  },
-  {
-    id: 704,
-    hskVersion: 'hsk3',
-    hskLevel: 3,
-    section: 'reading',
-    question: 'Điền từ nối: "我们俩____去年就认识了。"',
-    type: 'fill',
-    options: ['从', '打', '由', '自'],
-    correctAnswer: 0,
-    explanation: '"从...起/开始" biểu thị điểm mốc thời gian bắt đầu.',
-  },
-  {
-    id: 705,
-    hskVersion: 'hsk3',
-    hskLevel: 4,
-    section: 'reading',
-    question: 'Điền phó từ liên kết: "虽然遇到了很多挫折，但他____没有灰心。"',
-    type: 'fill',
-    options: ['并', '又', '更', '越'],
-    correctAnswer: 0,
-    explanation: '"并" dùng trước từ phủ định (并不/并没有) để nhấn mạnh sự phủ định.',
-  },
-  {
-    id: 706,
-    hskVersion: 'hsk3',
-    hskLevel: 5,
-    section: 'reading',
-    question: 'Chọn từ thư diện: "双方就进一步深化经贸合作____了深入探讨。"',
-    type: 'fill',
-    options: ['进行', '实行', '执行', '举行'],
-    correctAnswer: 0,
-    explanation: '"进行探讨/进行合作" là cụm từ phối hợp chính quy trong văn phong thương mại và ngoại giao.',
-  },
-  {
-    id: 707,
-    hskVersion: 'hsk3',
-    hskLevel: 6,
-    section: 'reading',
-    question: 'Chọn cặp từ đối ứng: "这一举措____缓解了当前的能源危机，____为可持续发展奠定了基石。"',
-    type: 'fill',
-    options: ['不仅...而且...', '宁可...也不...', '与其...不如...', '虽然...但是...'],
-    correctAnswer: 0,
-    explanation: 'Quan hệ tăng tiến: "不仅...而且..." (không chỉ... mà còn...).',
-  },
-  {
-    id: 708,
-    hskVersion: 'hsk3',
-    hskLevel: 7,
-    section: 'reading',
-    question: '[HSK 3.0 Cấp cao 7–9] Chọn từ ngữ học thuật thích hợp: "该学术论著深入____了东方哲学体系的内在演进逻辑。"',
-    type: 'reading',
-    options: ['阐述', '敷衍', '笼统', '推脱'],
-    correctAnswer: 0,
-    explanation: '"阐述" (chǎnshù) là thuật ngữ học thuật cao cấp mang nghĩa trình bày làm sáng tỏ một hệ thống lý luận.',
-  },
-];
+export const MASTER_EXAM_QUESTIONS: ExamQuestion[] = MASTER_EXAM_QUESTION_BANK;
 
 export class ExamRepository {
   private static instance: ExamRepository;
@@ -536,56 +273,91 @@ export class ExamRepository {
   }
 
   public getPaperMetadata(version: HskExamVersion, level: number): ExamPaperMetadata | undefined {
-    return OFFICIAL_EXAM_PAPERS.find((p) => p.hskVersion === version && p.level === level);
+    const list = getExamPapersByLevel(version, level);
+    return list[0] || EXAM_PAPER_CATALOG.find((p) => p.hskVersion === version && p.level === level);
+  }
+
+  public getPapersByLevel(version: HskExamVersion, level: number): ExamPaperMetadata[] {
+    return getExamPapersByLevel(version, level);
+  }
+
+  public getPaperById(paperId: string): ExamPaperMetadata | undefined {
+    return getExamPaperById(paperId);
   }
 
   public getAllPapers(): ExamPaperMetadata[] {
-    return OFFICIAL_EXAM_PAPERS;
+    return EXAM_PAPER_CATALOG;
   }
 
   public getCoverageSummary() {
-    return getExamCoverageSummary();
+    return examIngestionService.runValidationSuite();
   }
 
-  public async getQuestions(version: HskExamVersion, level: number): Promise<ExamQuestion[]> {
+  public async getQuestions(
+    version: HskExamVersion,
+    level: number,
+    paperId?: string
+  ): Promise<ExamQuestion[]> {
+    // 1. If specific paperId requested, fetch questions directly for that paper
+    if (paperId) {
+      const byPaper = getQuestionsByPaperId(paperId);
+      if (byPaper.length > 0) return byPaper;
+    }
+
+    // 2. Fetch questions matching version and level from verified master bank
+    const matched = getQuestionsByVersionAndLevel(version, level);
+    if (matched.length > 0) return matched;
+
+    // 3. Fallback to Supabase with STRICT version and level filtering (no cross-version mixing)
     const supabase = getSupabaseClient();
     if (supabase) {
       try {
-        const { data, error } = await supabase
-          .from('exam_questions')
+        const { data, error } = await (supabase
+          .from('exam_questions') as any)
           .select('*')
           .eq('hsk_level', level)
+          .eq('hsk_version', version)
           .order('id', { ascending: true });
 
         if (!error && data && data.length > 0) {
           return data.map((row: any) => ({
             id: row.id,
+            paperId: row.paper_id || `paper_${version}_l${level}_sample01`,
             hskVersion: (row.hsk_version as HskExamVersion) || version,
             hskLevel: row.hsk_level,
             section: (row.section as ExamSectionId) || 'reading',
+            type: (row.question_type as ExamQuestion['type']) || 'reading_single',
             question: row.question_text,
+            passageText: row.passage_text,
+            passageTitle: row.passage_title,
             audioPrompt: row.audio_prompt,
-            type: row.question_type as ExamQuestion['type'],
+            audioUrl: row.audio_url,
+            transcript: row.transcript,
             options: Array.isArray(row.options) ? row.options : JSON.parse(row.options || '[]'),
             correctAnswer: row.correct_answer_index,
             explanation: row.explanation,
+            provenance: row.provenance || {
+              source_id: 'yuyan-curated-standard',
+              source_url: 'https://yuyan.app/curated/exams',
+              source_type: 'official_portal',
+              hsk_version: version,
+              hsk_level: level,
+              exam_id: row.paper_id || 'default',
+              section: row.section || 'reading',
+              license: 'YUYAN License',
+              attribution: 'YUYAN Assessment',
+              imported_at: new Date().toISOString(),
+              validation_status: 'verified',
+            },
           }));
         }
       } catch (err) {
-        console.warn('Failed to fetch exam questions from Supabase, using verified fallback:', err);
+        console.warn('Failed to fetch exam questions from Supabase, returning verified empty set:', err);
       }
     }
 
-    // Local verified dataset matching version and level
-    const matched = MASTER_EXAM_QUESTIONS.filter(
-      (q) => q.hskVersion === version && q.hskLevel === level
-    );
-
-    if (matched.length > 0) return matched;
-
-    // Fallback cross-version if level matches
-    const cross = MASTER_EXAM_QUESTIONS.filter((q) => q.hskLevel === level);
-    return cross.length > 0 ? cross : MASTER_EXAM_QUESTIONS.slice(0, 4);
+    // NEVER substitute cross-version questions! Return empty array if level has no questions.
+    return [];
   }
 
   /**
@@ -725,5 +497,13 @@ export class ExamRepository {
 }
 
 export const examRepository = ExamRepository.getInstance();
-export { OFFICIAL_EXAM_PAPERS, OFFICIAL_EXAM_SOURCES, getExamCoverageSummary };
-export type { ExamPaperMetadata };
+export {
+  OFFICIAL_EXAM_PAPERS,
+  OFFICIAL_EXAM_SOURCES,
+  getExamCoverageSummary,
+  EXAM_PAPER_CATALOG,
+  MASTER_EXAM_QUESTION_BANK,
+  examIngestionService,
+  HSK_SOURCE_REGISTRY,
+};
+

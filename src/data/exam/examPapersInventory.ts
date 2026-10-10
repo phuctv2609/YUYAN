@@ -4,34 +4,8 @@
  * Tracks official syllabus sources, revisions, licensing, and verification status.
  */
 
-export interface ExamPaperMetadata {
-  paperId: string;
-  hskVersion: 'hsk2' | 'hsk3';
-  level: number;
-  sourceId: string;
-  titleZh: string;
-  titleVi: string;
-  syllabusStandard: string;
-  sourceUrl: string;
-  sourceRevision: string;
-  license: 'official_public_syllabus' | 'educational_fair_use' | 'yuyan_authorized';
-  classification: 'official_sample' | 'authorized_mock' | 'yuyan_standard_mock';
-  verificationStatus: 'verified' | 'provisional';
-  durationMinutes: number;
-  totalQuestions: number;
-  maxScore: number;
-  passingScore: number;
-  hasVerifiedAnswerKey: boolean;
-  hasListeningAudio: boolean;
-  hasTranscript: boolean;
-  sections: Array<{
-    id: 'listening' | 'reading' | 'writing';
-    title: string;
-    questionCount: number;
-    durationMinutes: number;
-    maxScore: number;
-  }>;
-}
+import { ExamPaperMetadata } from './examTypes';
+export type { ExamPaperMetadata };
 
 export interface ExamCoverageSummary {
   totalPapers: number;
