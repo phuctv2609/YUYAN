@@ -36,3 +36,8 @@ supabase/.temp/
 # Scratch & Temporary Testing
 scratch/
 
+# Auto-sync Runtime Files
+tools/autosync/*.log
+tools/autosync/.autosync.pid
+
+
