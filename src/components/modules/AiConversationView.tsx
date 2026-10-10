@@ -1,456 +1,505 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  BookOpen,
-  Mail,
-  Languages,
-  GraduationCap,
-  MessageSquare,
-  Edit3,
-  MoreHorizontal,
-  Search,
-  RotateCcw,
-  Sparkles,
-  ArrowRight,
-  Bot,
+  Mic,
+  Send,
   Volume2,
-  CheckCircle2,
-  Layers,
-  Split,
-  FileText,
-  Copy,
+  Play,
+  Star,
+  ArrowRight,
+  TrendingUp,
+  Award,
+  BookMarked,
+  FileSpreadsheet,
+  Bot,
+  Briefcase,
+  Paperclip,
+  Headphones,
+  BookOpen,
+  Edit3,
+  X,
+  LayoutGrid,
 } from 'lucide-react';
 import { useToast } from '../ui/Toast.tsx';
-import { aiApiService } from '../../services/ai/aiApiService';
 import { useYuyanAI } from '../../context/YuyanAIContext';
-import { YuyanAIAvatar } from '../ai/YuyanAIAvatar';
+import { speechSynthesisService } from '../../services/speech/speechSynthesisService';
 
-export const LEARNING_SHORTCUTS = [
-  { id: 'explain_grammar', label: 'Giải thích ngữ pháp', icon: BookOpen, prompt: 'Hãy giải thích cặn kẽ cách dùng ngữ pháp của cấu trúc: ' },
-  { id: 'syntax_analysis', label: 'Phân tích câu (Cú pháp)', icon: Split, prompt: 'Hãy phân tích các thành phần cú pháp (Chủ - Vị - Tân - Bổ ngữ) của câu: ' },
-  { id: 'compare_grammar', label: 'So sánh ngữ pháp', icon: Layers, prompt: 'Hãy so sánh sự giống và khác nhau giữa hai điểm ngữ pháp: ' },
-  { id: 'explain_vocab', label: 'Giải nghĩa từ vựng', icon: FileText, prompt: 'Hãy giải thích chi tiết sắc thái và các cụm từ cố định của từ: ' },
-  { id: 'generate_examples', label: 'Tạo câu ví dụ thực tế', icon: Sparkles, prompt: 'Hãy tạo 3 câu ví dụ thực tế song ngữ Trung-Việt có pinyin cho mẫu câu: ' },
-  { id: 'create_quiz', label: 'Tạo bài trắc nghiệm', icon: CheckCircle2, prompt: 'Hãy tạo 2 câu hỏi trắc nghiệm kiểm tra độ hiểu cho điểm ngữ pháp: ' },
-  { id: 'correct_writing', label: 'Sửa lỗi câu & diễn đạt', icon: Edit3, prompt: 'Hãy chỉ ra lỗi sai và sửa lại câu tiếng Trung sau cho tự nhiên nhất: ' },
-  { id: 'practice_dialogue', label: 'Luyện hội thoại tình huống', icon: MessageSquare, prompt: 'Hãy đóng vai cùng tôi luyện hội thoại tình huống: ' },
-  { id: 'explain_hsk', label: 'Giải thích đề thi HSK', icon: GraduationCap, prompt: 'Hãy phân tích bẫy và giải thích vì sao đáp án này đúng trong câu hỏi HSK: ' },
-  { id: 'free_question', label: 'Đặt câu hỏi tự do', icon: Bot, prompt: '' },
-];
+export interface AiConversationViewProps {
+  onSelectTab?: (tab: string) => void;
+  onOpenMoreFeatures?: () => void;
+}
 
-export const AiConversationView: React.FC = () => {
+export const AiConversationView: React.FC<AiConversationViewProps> = ({
+  onSelectTab,
+  onOpenMoreFeatures,
+}) => {
   const { showToast } = useToast();
   const { openAssistant, openVoiceModal } = useYuyanAI();
 
-  // AI Connection Health Status
-  const [healthStatus, setHealthStatus] = useState<'checking' | 'connected' | 'error'>('checking');
-  const [activeAiModel, setActiveAiModel] = useState<string>('gemini-flash-lite-latest');
-  const [sampleQuestionsSetIndex, setSampleQuestionsSetIndex] = useState(0);
+  const [inputVal, setInputVal] = useState('');
+  const [playingAudioKey, setPlayingAudioKey] = useState<string | null>(null);
+  const [favoriteWords, setFavoriteWords] = useState<Record<string, boolean>>({});
+  const [isHeroDismissed, setIsHeroDismissed] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    aiApiService
-      .checkHealth(false)
-      .then((res) => {
-        if (!mounted) return;
-        if (res.configured) {
-          setHealthStatus('connected');
-          if (res.model) setActiveAiModel(res.model);
-        } else {
-          setHealthStatus('error');
-        }
-      })
-      .catch(() => {
-        if (mounted) setHealthStatus('connected');
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const handlePlayAudio = (key: string, text: string) => {
+    if (playingAudioKey === key) {
+      speechSynthesisService.stop();
+      setPlayingAudioKey(null);
+      return;
+    }
+    setPlayingAudioKey(key);
+    void speechSynthesisService.speakBilingual({
+      text,
+      readingMode: 'chinese_only',
+      onEnd: () => setPlayingAudioKey(null),
+      onError: () => setPlayingAudioKey(null),
+    });
+  };
 
-  // 6 Core Functions from reference design
-  const functionCards = [
-    {
-      id: 'vocab',
-      title: 'Giải thích từ vựng',
-      desc: 'Nghĩa, cách dùng, ví dụ',
-      icon: BookOpen,
-      iconBg: 'bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-300',
-      prompt: 'Hãy giải thích chi tiết ý nghĩa, cách dùng, các cụm từ cố định và cho ví dụ câu cho từ vựng: ',
-    },
-    {
-      id: 'grammar',
-      title: 'Giải thích ngữ pháp',
-      desc: 'Phân tích, so sánh',
-      icon: Mail,
-      iconBg: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-300',
-      prompt: 'Hãy giải thích cặn kẽ cấu trúc ngữ pháp, điều kiện áp dụng và so sánh cách dùng của: ',
-    },
-    {
-      id: 'translate',
-      title: 'Dịch Trung ↔ Việt',
-      desc: 'Tự nhiên, chính xác',
-      icon: Languages,
-      iconBg: 'bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-300',
-      prompt: 'Dịch câu văn/đoạn văn sau sang tiếng Trung tự nhiên và phân tích các từ ngữ hay: ',
-    },
-    {
-      id: 'hsk',
-      title: 'Phân tích đề HSK',
-      desc: 'Chiến lược, mẹo làm bài',
-      icon: GraduationCap,
-      iconBg: 'bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-300',
-      prompt: 'Hãy phân tích phương pháp làm bài và bẫy thường gặp trong câu hỏi thi HSK này: ',
-    },
-    {
-      id: 'conversation',
-      title: 'Luyện hội thoại',
-      desc: 'Tình huống thực tế',
-      icon: MessageSquare,
-      iconBg: 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300',
-      prompt: 'Hãy đóng vai cùng tôi luyện hội thoại giao tiếp tiếng Trung theo tình huống thực tế: ',
-    },
-    {
-      id: 'writing',
-      title: 'Sửa lỗi & viết lại',
-      desc: 'Câu văn, bài luận',
-      icon: Edit3,
-      iconBg: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300',
-      prompt: 'Hãy sửa lỗi ngữ pháp, dùng từ và viết lại câu tiếng Trung sau cho tự nhiên nhất: ',
-    },
-  ];
+  const handleToggleFavorite = (word: string) => {
+    setFavoriteWords((prev) => {
+      const next = { ...prev, [word]: !prev[word] };
+      showToast(next[word] ? `Đã lưu từ "${word}" vào sổ từ vựng yêu thích` : `Đã bỏ lưu "${word}"`, 'info');
+      return next;
+    });
+  };
 
-  // Quick suggestions list
-  const quickSuggestions = [
-    {
-      id: '1',
-      icon: Search,
-      text: 'Giải thích cách dùng 了, 过, 着',
-      prompt: 'Giải thích sự khác biệt và cách dùng của 3 trợ từ động thái 了 (le), 过 (guo), 着 (zhe) kèm ví dụ so sánh song ngữ.',
-    },
-    {
-      id: '2',
-      icon: MessageSquare,
-      text: 'Tạo 5 câu hội thoại trong nhà hàng',
-      prompt: 'Tạo đoạn hội thoại 5 câu thực tế khi đi ăn tại nhà hàng Trung Quốc (gọi món, hỏi giá, thanh toán) kèm pinyin và dịch nghĩa.',
-    },
-    {
-      id: '3',
-      icon: GraduationCap,
-      text: 'Phân tích đề HSK 3.0 cấp 4',
-      prompt: 'Hướng dẫn chiến lược và những điểm ngữ pháp trọng tâm thường xuất hiện trong đề thi HSK 3.0 Cấp 4.',
-    },
-    {
-      id: '4',
-      icon: Languages,
-      text: 'Dịch đoạn văn này sang tiếng Trung',
-      prompt: 'Dịch đoạn văn sau sang tiếng Trung trang trọng và tự nhiên: "Rất vui được đón tiếp đoàn đại biểu đến thăm và làm việc."',
-    },
-    {
-      id: '5',
-      icon: Sparkles,
-      text: 'Lập kế hoạch học HSK trong 3 tháng',
-      prompt: 'Lập lộ trình ôn thi chứng chỉ HSK trong vòng 3 tháng hiệu quả cho người học từ trình độ sơ cấp.',
-    },
-  ];
+  const handleSubmitQuestion = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputVal.trim()) return;
+    const query = inputVal.trim();
+    setInputVal('');
+    openAssistant(query);
+  };
 
-  // Question sample sets (can rotate via "Đổi câu hỏi")
-  const sampleQuestionSets = [
-    [
-      {
-        id: 'q1',
-        title: '这个词怎么用？',
-        subtitle: 'Giải thích chi tiết với ví dụ',
-        tag: 'Từ vựng',
-        bgGradient: 'from-amber-500/20 via-sky-500/10 to-indigo-500/20',
-        prompt: 'Giải thích chi tiết cách dùng từ "终于" và phân biệt với "到底". Cho 3 ví dụ thực tế.',
-      },
-      {
-        id: 'q2',
-        title: '帮我分析这道HSK题',
-        subtitle: 'Phân tích đáp án và mẹo làm bài',
-        tag: 'Luyện thi HSK',
-        bgGradient: 'from-blue-500/20 via-cyan-500/10 to-teal-500/20',
-        prompt: 'Phân tích mẹo làm bài phần Đọc hiểu HSK và cách tìm từ khóa nhanh chóng trong đoạn văn dài.',
-      },
-      {
-        id: 'q3',
-        title: '我们来练习对话吧',
-        subtitle: 'Luyện hội thoại theo chủ đề',
-        tag: 'Giao tiếp',
-        bgGradient: 'from-emerald-500/20 via-teal-500/10 to-sky-500/20',
-        prompt: 'Chúng ta hãy luyện hội thoại tiếng Trung chủ đề: Hỏi đường đến ga tàu cao tốc.',
-      },
-    ],
-    [
-      {
-        id: 'q4',
-        title: '把字句怎么用？',
-        subtitle: 'Chinh phục câu chữ 把',
-        tag: 'Ngữ pháp',
-        bgGradient: 'from-purple-500/20 via-pink-500/10 to-rose-500/20',
-        prompt: 'Giải thích toàn diện cấu trúc câu chữ 把 trong tiếng Trung: các điều kiện bắt buộc và lỗi người Việt hay mắc phải.',
-      },
-      {
-        id: 'q5',
-        title: '商贸中文邮件怎么写？',
-        subtitle: 'Viết email thương mại',
-        tag: 'Thương mại',
-        bgGradient: 'from-indigo-500/20 via-blue-500/10 to-sky-500/20',
-        prompt: 'Hướng dẫn viết một email thương mại bằng tiếng Trung gửi đối tác để báo giá sản phẩm và đề nghị gặp mặt đàm phán.',
-      },
-      {
-        id: 'q6',
-        title: '成语背后的故事',
-        subtitle: 'Học thành ngữ qua điển cố',
-        tag: 'Văn hóa',
-        bgGradient: 'from-amber-500/20 via-orange-500/10 to-yellow-500/20',
-        prompt: 'Kể nguồn gốc và giải thích cách dùng thành ngữ "画蛇添足" (Vẽ rắn thêm chân) trong giao tiếp hàng ngày.',
-      },
-    ],
-  ];
+  const handleQuickChipClick = (scenarioPrompt: string) => {
+    openAssistant(scenarioPrompt);
+  };
 
-  const handleCopyMessage = (text: string) => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text);
-      showToast('Đã sao chép nội dung vào bộ nhớ tạm', 'info');
+  const handleNavigate = (tab: string) => {
+    if (onSelectTab) {
+      onSelectTab(tab);
     }
   };
 
-  const currentSampleQuestions = sampleQuestionSets[sampleQuestionsSetIndex % sampleQuestionSets.length];
-
-  const handleRotateQuestions = () => {
-    setSampleQuestionsSetIndex((prev) => prev + 1);
-    showToast('Đã đổi bộ câu hỏi gợi ý mới', 'info');
-  };
-
-  const handleSelectPrompt = (prompt: string) => {
-    openAssistant(prompt);
-  };
+  const featuredVocab = [
+    { hanzi: '你好', pinyin: 'nǐ hǎo', meaning: 'xin chào', key: 'vocab_1' },
+    { hanzi: '谢谢', pinyin: 'xièxie', meaning: 'cảm ơn', key: 'vocab_2' },
+    { hanzi: '再见', pinyin: 'zàijiàn', meaning: 'tạm biệt', key: 'vocab_3' },
+    { hanzi: '名字', pinyin: 'míngzi', meaning: 'tên', key: 'vocab_4' },
+    { hanzi: '学生', pinyin: 'xuésheng', meaning: 'học sinh', key: 'vocab_5' },
+  ];
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-7 animate-in fade-in duration-300">
-      {/* 1. HERO BANNER — Matching Reference Visual Direction */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-sky-100 via-sky-50 to-indigo-100/60 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-950/40 border border-sky-200/60 dark:border-sky-900/40 p-6 sm:p-8 md:p-10 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
-        {/* Soft Background Art & Chinese Mountain Motif */}
-        <div className="absolute inset-0 pointer-events-none opacity-25 dark:opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-sky-400 via-transparent to-transparent" />
+    <div className="max-w-[1440px] mx-auto p-3 sm:p-6 lg:p-8 space-y-6 animate-in fade-in duration-200 select-none">
+      {/* 1. TOP 3-COLUMN BENTO GRID MATCHING REFERENCE IMAGE */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Left Column (7/12 on LG, 8/12 on XL): Interactive Conversation Hero Card */}
+        <div className="lg:col-span-7 xl:col-span-7 rounded-3xl bg-gradient-to-br from-sky-100 via-sky-50 to-indigo-100/70 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-950/40 border border-sky-200/70 dark:border-sky-900/40 p-5 sm:p-7 shadow-sm flex flex-col justify-between relative overflow-hidden min-h-[380px]">
+          {/* Ambient art overlay */}
+          <div className="absolute inset-0 pointer-events-none opacity-20 dark:opacity-10 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-sky-400 via-transparent to-transparent" />
 
-        {/* Left Content */}
-        <div className="space-y-4 max-w-xl z-10 text-center md:text-left">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 dark:bg-slate-800/80 border border-sky-200/70 dark:border-slate-700 shadow-2xs backdrop-blur-xs">
-            <span
-              className={`w-2 h-2 rounded-full ${
-                healthStatus === 'connected' ? 'bg-status-success animate-pulse' : 'bg-amber-500'
-              }`}
-            />
-            <span className="text-2xs font-bold text-text-secondary">
-              Yuyan AI • {healthStatus === 'connected' ? `Trực tuyến (${activeAiModel})` : 'Đang kết nối...'}
-            </span>
-            {healthStatus === 'error' && (
-              <button
-                onClick={() => {
-                  setHealthStatus('checking');
-                  aiApiService.checkHealth(true).then((r) => setHealthStatus(r.configured ? 'connected' : 'error'));
-                }}
-                className="text-2xs text-primary font-bold hover:underline ml-1"
-              >
-                Thử lại câu này
-              </button>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-800 dark:text-white tracking-tight leading-tight">
-              Xin chào! 👋
-              <br />
-              <span className="text-primary dark:text-sky-400">Em cần mình hỗ trợ gì hôm nay?</span>
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium">
-              Học tiếng Trung theo cách của bạn. Yuyan AI luôn đồng hành cùng em trên hành trình chinh phục tiếng Trung 💙
-            </p>
-          </div>
-
-          <div className="pt-2 flex flex-wrap gap-3 justify-center md:justify-start">
+          {/* Dismiss button (matching X icon on reference image) */}
+          {!isHeroDismissed && (
             <button
-              onClick={() => openAssistant()}
-              className="px-5 py-2.5 rounded-2xl bg-primary text-white text-xs font-bold shadow-md hover:bg-primary-hover hover:shadow-lg transition-all active:scale-95 flex items-center gap-2"
+              onClick={() => setIsHeroDismissed(true)}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-white/70 dark:bg-slate-800/70 hover:bg-white dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors z-20 shadow-2xs"
+              title="Ẩn thông báo chào mừng"
             >
-              <Bot className="w-4 h-4" />
-              <span>Mở trò chuyện AI</span>
+              <X className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Top Section: Character Visual + Speech Bubbles */}
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 z-10">
+            {/* Traditional Hanfu Chinese Girl Avatar Illustration */}
+            <div className="relative shrink-0 select-none">
+              <div className="w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-2xl overflow-hidden border-2 border-white dark:border-slate-700 shadow-md bg-gradient-to-tr from-sky-400 to-indigo-300 flex items-center justify-center">
+                <img
+                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
+                  alt="Yuyan AI Tutor"
+                  className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-500"
+                />
+              </div>
+              <span className="absolute -bottom-1.5 -right-1.5 px-2 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold shadow-xs">
+                Yuyan AI
+              </span>
+            </div>
+
+            {/* Conversation Bubbles */}
+            <div className="flex-1 space-y-2.5 w-full">
+              {/* Bubble 1: "你好！" */}
+              <div className="p-3 sm:p-3.5 rounded-2xl bg-white/90 dark:bg-slate-800/90 border border-sky-200/60 dark:border-slate-700 shadow-2xs backdrop-blur-xs flex items-center justify-between gap-3">
+                <div>
+                  <div className="font-hanzi text-base sm:text-lg font-bold text-slate-800 dark:text-white leading-tight">
+                    你好！
+                  </div>
+                  <div className="text-2xs font-mono font-medium text-teal-600 dark:text-teal-400">
+                    Nǐ hǎo!
+                  </div>
+                  <div className="text-2xs text-slate-500 dark:text-slate-400 italic">
+                    Xin chào!
+                  </div>
+                </div>
+                <button
+                  onClick={() => handlePlayAudio('bubble_1', '你好！')}
+                  className={`w-8 h-8 rounded-full border transition-all flex items-center justify-center shrink-0 ${
+                    playingAudioKey === 'bubble_1'
+                      ? 'bg-primary text-white border-primary shadow-xs'
+                      : 'bg-white dark:bg-slate-700 text-primary border-sky-200/80 hover:scale-105 shadow-2xs'
+                  }`}
+                  title="Nghe phát âm"
+                >
+                  <Volume2 className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Bubble 2: "你今天想学习什么？" */}
+              <div className="p-3 sm:p-3.5 rounded-2xl bg-white/90 dark:bg-slate-800/90 border border-sky-200/60 dark:border-slate-700 shadow-2xs backdrop-blur-xs flex items-center justify-between gap-3">
+                <div>
+                  <div className="font-hanzi text-base sm:text-lg font-bold text-slate-800 dark:text-white leading-tight">
+                    你今天想学习什么？
+                  </div>
+                  <div className="text-2xs font-mono font-medium text-teal-600 dark:text-teal-400">
+                    Nǐ jīntiān xiǎng xuéxí shénme?
+                  </div>
+                  <div className="text-2xs text-slate-500 dark:text-slate-400 italic">
+                    Hôm nay bạn muốn học gì?
+                  </div>
+                </div>
+                <button
+                  onClick={() => handlePlayAudio('bubble_2', '你今天想学习什么？')}
+                  className={`w-8 h-8 rounded-full border transition-all flex items-center justify-center shrink-0 ${
+                    playingAudioKey === 'bubble_2'
+                      ? 'bg-primary text-white border-primary shadow-xs'
+                      : 'bg-white dark:bg-slate-700 text-primary border-sky-200/80 hover:scale-105 shadow-2xs'
+                  }`}
+                  title="Nghe phát âm"
+                >
+                  <Volume2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Middle: 4 Quick Scenario Chips */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-4 pb-3 z-10">
+            {[
+              {
+                id: 'speaking',
+                zh: '练习口语',
+                vi: 'Luyện nói',
+                icon: Mic,
+                prompt: 'Chúng ta hãy luyện giao tiếp khẩu ngữ tiếng Trung nhé!',
+              },
+              {
+                id: 'vocab',
+                zh: '学新词',
+                vi: 'Học từ mới',
+                icon: BookOpen,
+                prompt: 'Hãy dạy tôi 3 từ vựng tiếng Trung hữu ích hôm nay kèm ví dụ.',
+              },
+              {
+                id: 'grammar',
+                zh: '语法讲解',
+                vi: 'Giải thích ngữ pháp',
+                icon: Edit3,
+                prompt: 'Giải thích điểm ngữ pháp quan trọng trong tiếng Trung giao tiếp.',
+              },
+              {
+                id: 'listening',
+                zh: '听力练习',
+                vi: 'Luyện nghe',
+                icon: Headphones,
+                prompt: 'Tạo một đoạn hội thoại ngắn để tôi luyện nghe và trả lời câu hỏi.',
+              },
+            ].map((chip) => {
+              const Icon = chip.icon;
+              return (
+                <button
+                  key={chip.id}
+                  onClick={() => handleQuickChipClick(chip.prompt)}
+                  className="p-2 sm:p-2.5 rounded-2xl bg-white/80 dark:bg-slate-800/80 border border-sky-200/60 dark:border-slate-700 hover:border-primary/50 hover:bg-white dark:hover:bg-slate-800 shadow-2xs text-center transition-all group active:scale-95"
+                >
+                  <div className="w-7 h-7 mx-auto rounded-lg bg-sky-50 dark:bg-slate-700 text-primary flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
+                    <Icon className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="font-hanzi font-bold text-xs text-slate-800 dark:text-white leading-tight">
+                    {chip.zh}
+                  </div>
+                  <div className="text-[10px] text-text-muted leading-tight mt-0.5">
+                    {chip.vi}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Bottom: Interactive Search & Chat Composer Bar */}
+          <form
+            onSubmit={handleSubmitQuestion}
+            className="relative z-10 flex items-center gap-2 bg-white dark:bg-slate-800 rounded-full border border-sky-300/70 dark:border-slate-700 p-1.5 shadow-md focus-within:border-primary transition-all"
+          >
+            <button
+              type="button"
+              onClick={openVoiceModal}
+              className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:text-primary hover:bg-primary-soft transition-colors flex items-center justify-center shrink-0"
+              title="Luyện nói bằng giọng nói"
+            >
+              <Mic className="w-4 h-4" />
+            </button>
+
+            <input
+              type="text"
+              value={inputVal}
+              onChange={(e) => setInputVal(e.target.value)}
+              placeholder="Nhập câu hỏi bằng tiếng Trung hoặc tiếng Việt..."
+              className="flex-1 bg-transparent px-2 text-xs sm:text-sm text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none min-w-0"
+            />
+
+            <button
+              type="button"
+              onClick={() => openAssistant('Phân tích và giải thích giúp tôi nội dung này')}
+              className="p-2 text-slate-400 hover:text-primary transition-colors shrink-0"
+              title="Đính kèm tệp tin"
+            >
+              <Paperclip className="w-4 h-4" />
             </button>
 
             <button
-              onClick={openVoiceModal}
-              className="px-5 py-2.5 rounded-2xl bg-white dark:bg-slate-800 text-primary dark:text-sky-300 border border-sky-200 dark:border-slate-700 text-xs font-bold shadow-xs hover:bg-sky-50 dark:hover:bg-slate-700 transition-all active:scale-95 flex items-center gap-2"
+              type="submit"
+              disabled={!inputVal.trim()}
+              className="w-9 h-9 rounded-full bg-primary hover:bg-primary-hover disabled:opacity-40 text-white flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-xs"
+              title="Gửi câu hỏi"
             >
-              <Volume2 className="w-4 h-4 text-primary" />
-              <span>Luyện nói bằng giọng nói</span>
+              <Send className="w-4 h-4" />
+            </button>
+          </form>
+        </div>
+
+        {/* Middle Column (3/12): "Bài học hôm nay" (Today's Lesson Card) */}
+        <div className="lg:col-span-5 xl:col-span-3 rounded-3xl bg-surface border border-border-subtle p-5 shadow-2xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-text-primary">Bài học hôm nay</h3>
+              <span className="text-2xs font-extrabold px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+                HSK 2
+              </span>
+            </div>
+
+            {/* Scenic Chinese Pagoda Thumbnail with Play Button */}
+            <div
+              onClick={() => handleNavigate('lesson')}
+              className="relative h-32 rounded-2xl overflow-hidden cursor-pointer group shadow-2xs border border-border-subtle mb-3"
+            >
+              <img
+                src="https://images.unsplash.com/photo-1508804185872-d7badad00f7d?auto=format&fit=crop&w=600&q=80"
+                alt="Chinese Pagoda Scenic"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="absolute inset-0 bg-black/25 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-white/90 text-primary flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                  <Play className="w-5 h-5 fill-current ml-0.5" />
+                </div>
+              </div>
+            </div>
+
+            {/* Lesson Title & Translation */}
+            <div className="space-y-1">
+              <h4 className="font-hanzi font-bold text-sm text-text-primary leading-snug">
+                第1课 你好，你叫什么名字？
+              </h4>
+              <p className="text-2xs font-mono text-text-muted">
+                Dì 1 kè Nǐ hǎo, nǐ jiào shénme míngzi?
+              </p>
+              <p className="text-2xs text-text-secondary">
+                Bài 1: Xin chào, bạn tên là gì?
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-divider-line space-y-3">
+            <div className="flex items-center justify-between text-2xs text-text-muted">
+              <span>Tiến độ hoàn thành</span>
+              <span className="font-bold text-text-primary">0%</span>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-surface-secondary overflow-hidden">
+              <div className="h-full bg-primary rounded-full w-0" />
+            </div>
+
+            <button
+              onClick={() => handleNavigate('lesson')}
+              className="w-full py-2.5 rounded-2xl bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-98"
+            >
+              <span>Bắt đầu học</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
-        {/* Right Decorative Graphic — Clean, restrained, within bounds */}
-        <div className="hidden md:flex flex-col items-center justify-center px-6 py-4 rounded-2xl bg-white/60 dark:bg-slate-800/50 border border-sky-200/50 dark:border-slate-700/50 shadow-2xs backdrop-blur-xs shrink-0 select-none">
-          <YuyanAIAvatar size="lg" showOnlineStatus={true} />
-          <span className="text-2xs font-bold text-slate-700 dark:text-slate-200 mt-2">
-            Gia sư Yuyan AI
-          </span>
-          <span className="text-[10px] text-text-muted">
-            Trợ giảng tiếng Trung 24/7
-          </span>
+        {/* Right Column (2/12 on XL, 12/12 on LG): "Từ vựng nổi bật" */}
+        <div className="lg:col-span-12 xl:col-span-2 rounded-3xl bg-surface border border-border-subtle p-5 shadow-2xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-text-primary">Từ vựng nổi bật</h3>
+              <button
+                onClick={() => handleNavigate('vocabulary')}
+                className="text-2xs text-primary hover:underline font-semibold flex items-center gap-0.5"
+              >
+                <span>Xem thêm</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+
+            {/* Vocabulary list */}
+            <div className="space-y-2">
+              {featuredVocab.map((v) => {
+                const isFav = Boolean(favoriteWords[v.hanzi]);
+                return (
+                  <div
+                    key={v.key}
+                    className="p-2.5 rounded-2xl bg-surface-secondary/70 border border-border-subtle hover:border-primary/40 transition-colors flex items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="font-hanzi font-bold text-xs text-text-primary leading-tight">
+                        {v.hanzi}
+                      </div>
+                      <div className="text-[10px] font-mono text-teal-600 dark:text-teal-400 leading-tight">
+                        {v.pinyin}
+                      </div>
+                      <div className="text-[10px] text-text-muted leading-tight truncate">
+                        {v.meaning}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => handlePlayAudio(v.key, v.hanzi)}
+                        className="p-1 rounded-md text-text-muted hover:text-primary transition-colors"
+                        title="Nghe phát âm"
+                      >
+                        <Volume2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleToggleFavorite(v.hanzi)}
+                        className={`p-1 rounded-md transition-colors ${
+                          isFav ? 'text-amber-500' : 'text-text-muted hover:text-amber-500'
+                        }`}
+                        title={isFav ? 'Đã lưu' : 'Lưu từ vựng'}
+                      >
+                        <Star className={`w-3.5 h-3.5 ${isFav ? 'fill-amber-500' : ''}`} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* 2. CORE FUNCTION CARDS ROW (6 Core Cards + "Thêm >") */}
+      {/* 2. BOTTOM CORE FEATURE CARDS ROW (Matching Bottom Strip in Reference Image) */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-text-primary uppercase tracking-wider">
-            Chức năng trợ lý thông minh
+            Các chuyên mục học tập trọng tâm
           </h2>
-          <span className="text-2xs text-text-muted">Chọn nhanh tính năng để bắt đầu</span>
+          <span className="text-2xs text-text-muted">Chọn nhanh chuyên mục để luyện tập</span>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
-          {functionCards.map((fc) => {
-            const Icon = fc.icon;
+          {[
+            {
+              id: 'progress',
+              title: 'Lộ trình học cá nhân',
+              desc: 'Theo mục tiêu của bạn',
+              icon: TrendingUp,
+              color: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-300',
+            },
+            {
+              id: 'exam',
+              title: 'Thi thử HSK',
+              desc: 'Đánh giá trình độ thật',
+              icon: Award,
+              color: 'bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-300',
+            },
+            {
+              id: 'dictionary',
+              title: 'Từ điển thông minh',
+              desc: 'Tra cứu nhanh chóng',
+              icon: BookMarked,
+              color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300',
+            },
+            {
+              id: 'hanzi',
+              title: 'Hán tự và bộ thủ',
+              desc: 'Học viết từng nét bút',
+              icon: FileSpreadsheet,
+              color: 'bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-300',
+            },
+            {
+              id: 'ai',
+              title: 'AI hội thoại',
+              desc: 'Luyện nói như bản xứ',
+              icon: Bot,
+              color: 'bg-primary-soft text-primary',
+            },
+            {
+              id: 'specialized',
+              title: 'Thư viện chủ đề',
+              desc: 'Giao tiếp, du lịch, công việc',
+              icon: Briefcase,
+              color: 'bg-teal-100 text-teal-600 dark:bg-teal-900/40 dark:text-teal-300',
+            },
+          ].map((card) => {
+            const Icon = card.icon;
             return (
               <button
-                key={fc.id}
-                onClick={() => handleSelectPrompt(fc.prompt)}
-                className="group p-4 rounded-2xl bg-surface dark:bg-slate-900 border border-border-subtle hover:border-primary/50 shadow-2xs hover:shadow-md transition-all text-left flex flex-col justify-between gap-3 active:scale-98"
+                key={card.id}
+                onClick={() => handleNavigate(card.id)}
+                className="group p-3.5 rounded-2xl bg-surface border border-border-subtle hover:border-primary/50 shadow-2xs hover:shadow-md transition-all text-left flex flex-col justify-between gap-3 active:scale-98"
               >
                 <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${fc.iconBg}`}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${card.color}`}
                 >
-                  <Icon className="w-5 h-5" />
+                  <Icon className="w-4 h-4" />
                 </div>
                 <div>
                   <h3 className="text-xs font-bold text-text-primary group-hover:text-primary transition-colors leading-tight">
-                    {fc.title}
+                    {card.title}
                   </h3>
                   <p className="text-2xs text-text-muted mt-0.5 leading-snug">
-                    {fc.desc}
+                    {card.desc}
                   </p>
                 </div>
               </button>
             );
           })}
 
-          {/* "Thêm >" Action Card */}
+          {/* "Thêm >" Action Card: Open More Features Modal on Desktop & Mobile */}
           <button
-            onClick={() => handleSelectPrompt('Liệt kê tất cả các khả năng giảng dạy và hỗ trợ mà Yuyan AI có thể cung cấp.')}
-            className="group p-4 rounded-2xl bg-surface-secondary/60 dark:bg-slate-800/50 border border-dashed border-border-subtle hover:border-primary/50 text-left flex flex-col justify-between gap-3 transition-all active:scale-98"
+            onClick={() => {
+              if (onOpenMoreFeatures) {
+                onOpenMoreFeatures();
+              } else {
+                handleNavigate('beginner');
+              }
+            }}
+            className="group p-3.5 rounded-2xl bg-surface-secondary/70 border border-dashed border-border-subtle hover:border-primary/50 text-left flex flex-col justify-between gap-3 transition-all active:scale-98 cursor-pointer"
+            title="Khám phá thêm tất cả tính năng YUYAN"
           >
-            <div className="w-10 h-10 rounded-xl bg-slate-200/80 dark:bg-slate-700 flex items-center justify-center text-text-muted shrink-0 group-hover:scale-110 transition-transform">
-              <MoreHorizontal className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-primary shrink-0 group-hover:scale-110 transition-transform">
+              <LayoutGrid className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-xs font-bold text-text-primary group-hover:text-primary transition-colors leading-tight">
-                Thêm &gt;
+              <h3 className="text-xs font-bold text-text-primary group-hover:text-primary transition-colors leading-tight flex items-center gap-1">
+                <span>Thêm</span>
+                <span className="text-primary font-bold">&gt;</span>
               </h3>
               <p className="text-2xs text-text-muted mt-0.5 leading-snug">
                 Khám phá thêm
               </p>
             </div>
           </button>
-        </div>
-      </div>
-
-      {/* 3. TWO COLUMNS SECTION: Gợi ý nhanh & Ví dụ câu hỏi */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column (5 Cols): Gợi ý nhanh */}
-        <div className="lg:col-span-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-text-primary uppercase tracking-wider">
-              Gợi ý nhanh
-            </h2>
-            <span className="text-2xs text-text-muted">Nhấn để hỏi ngay</span>
-          </div>
-
-          <div className="space-y-2">
-            {quickSuggestions.map((qs) => {
-              const Icon = qs.icon;
-              return (
-                <button
-                  key={qs.id}
-                  onClick={() => handleSelectPrompt(qs.prompt)}
-                  className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-surface dark:bg-slate-900 border border-border-subtle hover:border-primary/40 hover:bg-surface-secondary/60 shadow-2xs transition-all text-left group active:scale-98"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-lg bg-primary-soft text-primary flex items-center justify-center shrink-0">
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <span className="text-xs font-semibold text-text-secondary group-hover:text-primary transition-colors">
-                      {qs.text}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCopyMessage(qs.prompt);
-                      }}
-                      role="button"
-                      tabIndex={0}
-                      className="p-1 rounded-md text-text-muted hover:text-primary hover:bg-surface-secondary transition-colors"
-                      title="Sao chép câu hỏi"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </span>
-                    <ArrowRight className="w-3.5 h-3.5 text-text-muted group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Right Column (7 Cols): Ví dụ câu hỏi */}
-        <div className="lg:col-span-7 space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-text-primary uppercase tracking-wider">
-              Ví dụ câu hỏi
-            </h2>
-            <button
-              onClick={handleRotateQuestions}
-              className="flex items-center gap-1 text-2xs font-bold text-primary hover:text-primary-hover transition-colors"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Đổi câu hỏi</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {currentSampleQuestions.map((sq) => {
-              return (
-                <div
-                  key={sq.id}
-                  onClick={() => handleSelectPrompt(sq.prompt)}
-                  className="group cursor-pointer rounded-2xl border border-border-subtle hover:border-primary/50 bg-surface dark:bg-slate-900 shadow-2xs hover:shadow-md transition-all overflow-hidden flex flex-col active:scale-98"
-                >
-                  {/* Decorative Visual Top */}
-                  <div className={`h-28 w-full bg-gradient-to-br ${sq.bgGradient} flex items-center justify-center p-3 relative select-none`}>
-                    <span className="px-2 py-0.5 rounded-full bg-white/80 dark:bg-slate-900/80 text-primary dark:text-sky-300 text-2xs font-extrabold shadow-xs absolute top-2.5 left-2.5">
-                      {sq.tag}
-                    </span>
-                    <p className="font-hanzi text-base font-bold text-slate-800 dark:text-white text-center leading-snug drop-shadow-xs group-hover:scale-105 transition-transform">
-                      "{sq.title}"
-                    </p>
-                  </div>
-
-                  {/* Card Content */}
-                  <div className="p-3.5 flex-1 flex flex-col justify-between">
-                    <p className="text-xs font-bold text-text-primary group-hover:text-primary transition-colors">
-                      {sq.subtitle}
-                    </p>
-                    <span className="text-2xs text-text-muted mt-2 font-medium flex items-center gap-1 group-hover:text-primary">
-                      <span>Bấm để hỏi</span>
-                      <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         </div>
       </div>
     </div>

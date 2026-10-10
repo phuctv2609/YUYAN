@@ -1,17 +1,47 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Flame, Bell, ChevronDown, Menu, Sun, Moon, Edit3, User, Save, X, Loader2 } from 'lucide-react';
+import {
+  Search,
+  Flame,
+  Bell,
+  ChevronDown,
+  Menu,
+  Sun,
+  Moon,
+  Edit3,
+  User,
+  Save,
+  X,
+  Loader2,
+  Home,
+  GraduationCap,
+  Languages,
+  Headphones,
+  Mic,
+  Award,
+  BookMarked,
+  Bot,
+  LayoutGrid,
+} from 'lucide-react';
 import { useToast } from '../ui/Toast.tsx';
 import { useTheme } from '../../context/ThemeContext.tsx';
 import { learnerRepository, StudentProfile, validateStudentProfile, PRESET_AVATARS } from '../../data/repositories/learnerRepository.ts';
 import { LearnerAvatar } from '../ui/LearnerAvatar.tsx';
 
 interface TopNavbarProps {
+  currentTab?: string;
   onOpenMobileMenu: () => void;
   onOpenSearchModal?: () => void;
   onSelectTab?: (tab: string) => void;
+  onOpenMoreFeatures?: () => void;
 }
 
-export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileMenu, onOpenSearchModal, onSelectTab }) => {
+export const TopNavbar: React.FC<TopNavbarProps> = ({
+  currentTab = 'dashboard',
+  onOpenMobileMenu,
+  onOpenSearchModal,
+  onSelectTab,
+  onOpenMoreFeatures,
+}) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [profile, setProfile] = useState<StudentProfile>(() => learnerRepository.getProfile());
@@ -136,6 +166,77 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileMenu, onOpenSe
             </kbd>
           </div>
         </div>
+      </div>
+
+      {/* Center: Desktop Navigation Tabs & "Thêm" Action (Matching Reference Design) */}
+      <nav className="hidden 2xl:flex items-center gap-1 flex-shrink-0">
+        {[
+          { id: 'dashboard', label: 'Trang chủ', icon: Home },
+          { id: 'lesson', label: 'HSK', icon: GraduationCap },
+          { id: 'vocabulary', label: 'Từ vựng', icon: Languages },
+          { id: 'listening', label: 'Luyện nghe', icon: Headphones },
+          { id: 'speaking', label: 'Luyện nói', icon: Mic },
+          { id: 'exam', label: 'Thi thử', icon: Award },
+          { id: 'dictionary', label: 'Từ điển', icon: BookMarked },
+          { id: 'ai', label: 'AI hội thoại', icon: Bot, isAiPill: true },
+        ].map((item) => {
+          const Icon = item.icon;
+          const isActive = currentTab === item.id;
+          if (item.isAiPill) {
+            return (
+              <button
+                key={item.id}
+                onClick={() => onSelectTab && onSelectTab(item.id)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 shadow-2xs ${
+                  isActive
+                    ? 'bg-primary text-white shadow-md scale-105'
+                    : 'bg-primary-soft text-primary hover:bg-primary hover:text-white'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{item.label}</span>
+              </button>
+            );
+          }
+          return (
+            <button
+              key={item.id}
+              onClick={() => onSelectTab && onSelectTab(item.id)}
+              className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                isActive
+                  ? 'text-primary bg-primary-soft font-bold'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-surface-secondary'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5 text-text-muted" />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+
+        {/* Functional "Thêm" (More) Navigation Button on Desktop */}
+        <button
+          onClick={onOpenMoreFeatures}
+          className="px-2.5 py-1.5 rounded-xl border border-border-subtle bg-surface hover:bg-surface-secondary text-text-secondary hover:text-text-primary text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+          title="Khám phá thêm tính năng YUYAN"
+          aria-label="Khám phá thêm tính năng"
+        >
+          <LayoutGrid className="w-3.5 h-3.5 text-primary" />
+          <span>Thêm</span>
+        </button>
+      </nav>
+
+      {/* For medium to large desktops (< 2xl), render the compact functional "Thêm" button */}
+      <div className="hidden md:flex 2xl:hidden items-center gap-1.5 flex-shrink-0">
+        <button
+          onClick={onOpenMoreFeatures}
+          className="px-3 py-1.5 rounded-xl border border-border-subtle bg-surface hover:bg-surface-secondary text-text-secondary hover:text-text-primary text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+          title="Khám phá thêm tính năng YUYAN"
+          aria-label="Khám phá thêm tính năng"
+        >
+          <LayoutGrid className="w-3.5 h-3.5 text-primary" />
+          <span>Thêm tính năng</span>
+        </button>
       </div>
 
       {/* Right: Streak Telemetry, Notifications & User Info */}
@@ -345,7 +446,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileMenu, onOpenSe
                   onChange={(e) => {
                     setEditDisplayName(e.target.value);
                     if (validationErrors.displayName) {
-                      setValidationErrors(prev => ({ ...prev, displayName: undefined }));
+                      setValidationErrors((prev: any) => ({ ...prev, displayName: undefined }));
                     }
                   }}
                   disabled={isSaving}
@@ -376,7 +477,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenMobileMenu, onOpenSe
                   onChange={(e) => {
                     setEditSchoolEmail(e.target.value);
                     if (validationErrors.schoolEmail) {
-                      setValidationErrors(prev => ({ ...prev, schoolEmail: undefined }));
+                      setValidationErrors((prev: any) => ({ ...prev, schoolEmail: undefined }));
                     }
                   }}
                   disabled={isSaving}

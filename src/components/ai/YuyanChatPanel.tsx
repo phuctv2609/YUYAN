@@ -23,6 +23,8 @@ import {
   Image as ImageIcon,
   AlertCircle,
   Square,
+  Sparkles,
+  Star,
 } from 'lucide-react';
 import { useYuyanAI } from '../../context/YuyanAIContext';
 import { YuyanAIAvatar } from './YuyanAIAvatar';
@@ -53,6 +55,19 @@ export const YuyanChatPanel: React.FC<{
     sendMessage,
     isLoading,
     voiceSettings,
+    conversationMode,
+    setConversationMode,
+    activeScenario,
+    setActiveScenario,
+    hskLevel,
+    setHskLevel,
+    alwaysShowPinyin,
+    setAlwaysShowPinyin,
+    alwaysShowTranslation,
+    setAlwaysShowTranslation,
+    toggleMessagePinyin,
+    toggleMessageTranslation,
+    toggleMessageBookmark,
   } = useYuyanAI();
 
   const [isExpanded, setIsExpanded] = useState(() => {
@@ -319,7 +334,35 @@ export const YuyanChatPanel: React.FC<{
             </div>
           </div>
 
-          <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
+          <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+            {/* On-demand Global Pinyin Toggle */}
+            <button
+              onClick={() => setAlwaysShowPinyin((p) => !p)}
+              className={`px-2 py-1 rounded-xl text-3xs font-bold border transition-colors flex items-center gap-1 ${
+                alwaysShowPinyin
+                  ? 'bg-teal-500/15 border-teal-500/40 text-teal-600 dark:text-teal-400'
+                  : 'bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-teal-400'
+              }`}
+              title="Bật/Tắt hiển thị Pinyin tự động cho tất cả tin nhắn"
+            >
+              <span>拼</span>
+              <span className="hidden sm:inline">Pinyin</span>
+            </button>
+
+            {/* On-demand Global Translation Toggle */}
+            <button
+              onClick={() => setAlwaysShowTranslation((t) => !t)}
+              className={`px-2 py-1 rounded-xl text-3xs font-bold border transition-colors flex items-center gap-1 ${
+                alwaysShowTranslation
+                  ? 'bg-primary-soft border-primary/40 text-primary'
+                  : 'bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-primary/40'
+              }`}
+              title="Bật/Tắt hiển thị bản dịch tiếng Việt cho tất cả tin nhắn"
+            >
+              <span>译</span>
+              <span className="hidden sm:inline">Dịch</span>
+            </button>
+
             {/* Settings button */}
             <button
               onClick={openSettingsModal}
@@ -376,10 +419,102 @@ export const YuyanChatPanel: React.FC<{
           </div>
         </div>
 
+        {/* 1.5. 5-Mode Conversation Pill Bar */}
+        <div
+          className="flex-shrink-0 px-3 py-1.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 flex items-center gap-1.5 overflow-x-auto select-none"
+          style={{ scrollbarWidth: 'none' }}
+        >
+          {[
+            { id: 'free_chat', label: '💬 Tự do', desc: 'Trò chuyện tự nhiên hàng ngày', scenario: 'Hội thoại tự do hàng ngày như bạn bè bản xứ' },
+            { id: 'roleplay', label: '🎭 Tình huống', desc: 'Đóng vai nhà hàng, mua sắm...', scenario: 'Quán cà phê / Nhà hàng (Gọi món & đồ uống)' },
+            { id: 'speaking', label: '🎙️ Luyện nói', desc: 'Khẩu ngữ & phản xạ', scenario: 'Luyện khẩu ngữ & phản xạ câu ngắn chuẩn Bắc Kinh' },
+            { id: 'correction', label: '💡 Sửa lỗi', desc: 'Trò chuyện & nhận mẹo sửa lỗi', scenario: 'Chế độ sửa lỗi hội thoại nhẹ nhàng' },
+            { id: 'hsk', label: `🎓 HSK ${hskLevel}`, desc: 'Hội thoại chuẩn từ vựng HSK', scenario: `Luyện hội thoại theo chuẩn từ vựng HSK ${hskLevel}` },
+          ].map((modeItem) => {
+            const isActive = conversationMode === modeItem.id;
+            return (
+              <button
+                key={modeItem.id}
+                onClick={() => {
+                  setConversationMode(modeItem.id as any);
+                  setActiveScenario(modeItem.scenario);
+                }}
+                className={`px-2.5 py-1 rounded-full text-2xs font-semibold whitespace-nowrap transition-all flex-shrink-0 ${
+                  isActive
+                    ? 'bg-primary text-white shadow-2xs'
+                    : 'bg-white dark:bg-slate-700/80 text-slate-700 dark:text-slate-200 hover:text-primary hover:bg-slate-100 border border-slate-200/60 dark:border-slate-600/50'
+                }`}
+                title={modeItem.desc}
+              >
+                {modeItem.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Role-play quick scenario picker (shown when roleplay mode is selected) */}
+        {conversationMode === 'roleplay' && (
+          <div
+            className="flex-shrink-0 px-3 py-1 bg-amber-50/70 dark:bg-amber-950/20 border-b border-amber-200/50 dark:border-amber-900/30 flex items-center gap-1.5 overflow-x-auto select-none text-3xs"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            <span className="text-amber-700 dark:text-amber-400 font-bold shrink-0">Bối cảnh:</span>
+            {[
+              '☕ Quán cà phê',
+              '🛍️ Mua sắm',
+              '✈️ Sân bay',
+              '💼 Công sở',
+              '🚕 Gọi taxi',
+              '🏨 Khách sạn',
+            ].map((sc) => (
+              <button
+                key={sc}
+                onClick={() => setActiveScenario(`Đóng vai trong tình huống: ${sc}`)}
+                className={`px-2 py-0.5 rounded-md font-medium shrink-0 transition-colors ${
+                  activeScenario.includes(sc.slice(2).trim())
+                    ? 'bg-amber-500 text-white font-bold'
+                    : 'bg-white/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-amber-200/60 hover:bg-amber-100'
+                }`}
+              >
+                {sc}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* HSK Level picker (shown when HSK mode is selected) */}
+        {conversationMode === 'hsk' && (
+          <div
+            className="flex-shrink-0 px-3 py-1 bg-purple-50/70 dark:bg-purple-950/20 border-b border-purple-200/50 dark:border-purple-900/30 flex items-center gap-1.5 overflow-x-auto select-none text-3xs"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            <span className="text-purple-700 dark:text-purple-300 font-bold shrink-0">Trình độ HSK:</span>
+            {[1, 2, 3, 4, 5, 6].map((lvl) => (
+              <button
+                key={lvl}
+                onClick={() => {
+                  setHskLevel(lvl);
+                  setActiveScenario(`Luyện hội thoại theo chuẩn từ vựng HSK ${lvl}`);
+                }}
+                className={`px-2 py-0.5 rounded-md font-bold shrink-0 transition-colors ${
+                  hskLevel === lvl
+                    ? 'bg-purple-600 text-white shadow-2xs'
+                    : 'bg-white/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-purple-200/60 hover:bg-purple-100'
+                }`}
+              >
+                HSK {lvl}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* 2. Conversation Message List (100% Solid) */}
         <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 bg-white dark:bg-slate-900 custom-scrollbar text-xs">
           {messages.map((msg) => {
             const isUser = msg.sender === 'user';
+            const showPinyin = Boolean(msg.pinyin && (msg.isPinyinVisible || alwaysShowPinyin));
+            const showTranslation = Boolean(msg.vietnamese && (msg.isTranslationVisible || alwaysShowTranslation));
+
             return (
               <div
                 key={msg.id}
@@ -388,7 +523,7 @@ export const YuyanChatPanel: React.FC<{
                 {!isUser && <YuyanAIAvatar size="sm" className="mt-1 shrink-0" />}
 
                 <div
-                  className={`max-w-[85%] rounded-2xl p-3.5 shadow-2xs space-y-2 ${
+                  className={`max-w-[85%] rounded-2xl p-3.5 shadow-2xs space-y-2.5 ${
                     isUser
                       ? 'bg-primary text-white rounded-br-xs'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200/90 dark:border-slate-700 rounded-bl-xs'
@@ -420,7 +555,31 @@ export const YuyanChatPanel: React.FC<{
                       {msg.text}
                     </div>
                   ) : (
-                    <YuyanMarkdownRenderer content={msg.text} fontSize="sm" />
+                    <div className="space-y-2">
+                      <YuyanMarkdownRenderer content={msg.text} fontSize="sm" />
+
+                      {/* On-demand Pinyin Strip */}
+                      {showPinyin && msg.pinyin && (
+                        <div className="text-2xs font-mono font-medium text-teal-700 dark:text-teal-300 bg-teal-500/10 px-2.5 py-1 rounded-lg border border-teal-500/20 select-text animate-in fade-in duration-150">
+                          {msg.pinyin}
+                        </div>
+                      )}
+
+                      {/* On-demand Vietnamese Translation Strip */}
+                      {showTranslation && msg.vietnamese && (
+                        <div className="text-2xs text-slate-600 dark:text-slate-300 italic bg-slate-200/60 dark:bg-slate-700/60 px-2.5 py-1 rounded-lg border border-slate-300/40 dark:border-slate-600/40 select-text animate-in fade-in duration-150">
+                          🇻🇳 {msg.vietnamese}
+                        </div>
+                      )}
+
+                      {/* Gentle Correction / Feedback Note */}
+                      {msg.feedback && (
+                        <div className="text-2xs text-amber-800 dark:text-amber-200 bg-amber-500/10 px-2.5 py-1.5 rounded-lg border border-amber-500/25 font-medium flex items-start gap-1.5 animate-in fade-in duration-150">
+                          <Sparkles className="w-3.5 h-3.5 shrink-0 text-amber-500 mt-0.5" />
+                          <span>{msg.feedback}</span>
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   {/* Sub-actions for AI Message */}
@@ -428,11 +587,11 @@ export const YuyanChatPanel: React.FC<{
                     <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-1.5 text-2xs text-slate-500 dark:text-slate-400">
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={() => handleSpeak(msg.id, msg.text, 'all')}
+                          onClick={() => handleSpeak(msg.id, msg.text, 'chinese_only')}
                           className={`p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center gap-1 ${
                             speakingId === msg.id ? 'text-primary font-bold' : 'text-slate-500 dark:text-slate-400'
                           }`}
-                          title="Nghe phát âm song ngữ (Trung - Việt)"
+                          title="Nghe phát âm chuẩn tiếng Trung"
                         >
                           {speakingId === msg.id ? (
                             <Square className="w-3.5 h-3.5 fill-current text-primary" />
@@ -442,12 +601,45 @@ export const YuyanChatPanel: React.FC<{
                           <span className="text-3xs hidden sm:inline">Phát âm</span>
                         </button>
 
+                        {/* On-demand Pinyin toggle button */}
+                        {msg.pinyin && (
+                          <button
+                            onClick={() => toggleMessagePinyin(msg.id)}
+                            className={`px-1.5 py-0.5 rounded-md text-3xs font-semibold transition-colors ${
+                              showPinyin
+                                ? 'bg-teal-500/20 text-teal-700 dark:text-teal-300 font-bold'
+                                : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400'
+                            }`}
+                            title="Hiện / Ẩn phiên âm Pinyin câu này"
+                          >
+                            拼
+                          </button>
+                        )}
+
+                        {/* On-demand Translation toggle button */}
+                        {msg.vietnamese && (
+                          <button
+                            onClick={() => toggleMessageTranslation(msg.id)}
+                            className={`px-1.5 py-0.5 rounded-md text-3xs font-semibold transition-colors ${
+                              showTranslation
+                                ? 'bg-primary-soft text-primary font-bold'
+                                : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400'
+                            }`}
+                            title="Hiện / Ẩn bản dịch tiếng Việt câu này"
+                          >
+                            译
+                          </button>
+                        )}
+
+                        {/* Bookmark Button */}
                         <button
-                          onClick={() => handleSpeak(msg.id, msg.text, 'chinese_only')}
-                          className="px-1.5 py-0.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-3xs text-text-secondary transition-colors"
-                          title="Chỉ nghe các đoạn chữ Hán tiếng Trung"
+                          onClick={() => toggleMessageBookmark(msg.id)}
+                          className={`p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${
+                            msg.isBookmarked ? 'text-amber-500 font-bold' : 'text-slate-500 dark:text-slate-400'
+                          }`}
+                          title={msg.isBookmarked ? 'Đã lưu câu mẫu' : 'Lưu câu mẫu này'}
                         >
-                          🇨🇳 Tiếng Trung
+                          <Star className={`w-3.5 h-3.5 ${msg.isBookmarked ? 'fill-amber-500 text-amber-500' : ''}`} />
                         </button>
 
                         <button
@@ -466,13 +658,13 @@ export const YuyanChatPanel: React.FC<{
                       {/* Interactive Quick Context Suggestions */}
                       <div className="flex gap-1">
                         <button
-                          onClick={() => void sendMessage(`Giải thích sâu hơn về: "${msg.text.slice(0, 40)}"`)}
+                          onClick={() => void sendMessage(`Giải thích chi tiết ngữ pháp và cách dùng của câu: "${msg.text.slice(0, 50)}"`)}
                           className="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 hover:bg-primary/20 hover:text-primary transition-colors font-medium text-slate-700 dark:text-slate-200 text-3xs"
                         >
-                          Giải thích sâu hơn
+                          Giải thích câu
                         </button>
                         <button
-                          onClick={() => void sendMessage(`Thêm ví dụ thực tế cho: "${msg.text.slice(0, 40)}"`)}
+                          onClick={() => void sendMessage(`Tạo thêm 2 câu ví dụ tương tự cho: "${msg.text.slice(0, 40)}"`)}
                           className="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 hover:bg-primary/20 hover:text-primary transition-colors font-medium text-slate-700 dark:text-slate-200 text-3xs"
                         >
                           Thêm ví dụ

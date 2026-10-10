@@ -9,6 +9,8 @@ import { VoiceSettings, DEFAULT_VOICE_SETTINGS } from '../services/speech/speech
 import { aiApiService, AiChatAttachment } from '../services/ai/aiApiService';
 import { speechSynthesisService } from '../services/speech/speechSynthesisService';
 
+export type ConversationMode = 'free_chat' | 'roleplay' | 'speaking' | 'correction' | 'hsk';
+
 export interface ChatMessage {
   id: number;
   sender: 'ai' | 'user';
@@ -16,6 +18,11 @@ export interface ChatMessage {
   attachment?: AiChatAttachment | null;
   pinyin?: string;
   vietnamese?: string;
+  feedback?: string | null;
+  followUp?: string;
+  isPinyinVisible?: boolean;
+  isTranslationVisible?: boolean;
+  isBookmarked?: boolean;
   timestamp?: string;
   isStreaming?: boolean;
 }
@@ -28,6 +35,19 @@ interface YuyanAIContextValue {
   isLanguageModalOpen: boolean;
   messages: ChatMessage[];
   voiceSettings: VoiceSettings;
+  conversationMode: ConversationMode;
+  setConversationMode: (mode: ConversationMode) => void;
+  activeScenario: string;
+  setActiveScenario: (scenario: string) => void;
+  hskLevel: number;
+  setHskLevel: (level: number) => void;
+  alwaysShowPinyin: boolean;
+  setAlwaysShowPinyin: (show: boolean | ((prev: boolean) => boolean)) => void;
+  alwaysShowTranslation: boolean;
+  setAlwaysShowTranslation: (show: boolean | ((prev: boolean) => boolean)) => void;
+  toggleMessagePinyin: (id: number) => void;
+  toggleMessageTranslation: (id: number) => void;
+  toggleMessageBookmark: (id: number) => void;
   openAssistant: (initialPrompt?: string) => void;
   closeAssistant: () => void;
   toggleAssistant: () => void;
@@ -78,6 +98,52 @@ export const YuyanAIProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Conversation Modes & Personalization
+  const [conversationMode, setConversationMode] = useState<ConversationMode>('free_chat');
+  const [activeScenario, setActiveScenario] = useState<string>('Hội thoại tự do hàng ngày như bạn bè bản xứ');
+  const [hskLevel, setHskLevel] = useState<number>(2);
+
+  // On-demand visibility preferences (persisted)
+  const [alwaysShowPinyin, setAlwaysShowPinyinState] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('yuyan_always_show_pinyin') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const [alwaysShowTranslation, setAlwaysShowTranslationState] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('yuyan_always_show_translation') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const setAlwaysShowPinyin = useCallback((show: boolean | ((prev: boolean) => boolean)) => {
+    setAlwaysShowPinyinState((prev) => {
+      const next = typeof show === 'function' ? show(prev) : show;
+      try {
+        localStorage.setItem('yuyan_always_show_pinyin', String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
+
+  const setAlwaysShowTranslation = useCallback((show: boolean | ((prev: boolean) => boolean)) => {
+    setAlwaysShowTranslationState((prev) => {
+      const next = typeof show === 'function' ? show(prev) : show;
+      try {
+        localStorage.setItem('yuyan_always_show_translation', String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
+
   // Settings
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>(() => {
     try {
@@ -101,7 +167,7 @@ export const YuyanAIProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, []);
 
-  // Initial welcome message
+  // Initial welcome message (Natural Chinese Conversation Partner)
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_CHAT_KEY);
@@ -116,9 +182,11 @@ export const YuyanAIProvider: React.FC<{ children: React.ReactNode }> = ({ child
       {
         id: 1,
         sender: 'ai',
-        text: 'Xin chào! Mình là Yuyan AI. Em muốn luyện gì hôm nay? 😊',
-        pinyin: 'Nǐ hǎo! Wǒ shì Yuyan AI. Nǐ jīntiān xiǎng liànxí shénme?',
-        vietnamese: 'Xin chào! Mình là Yuyan AI. Em muốn luyện gì hôm nay? 😊',
+        text: '你好！今天过得怎么样？想和我聊点什么呢？😊',
+        pinyin: 'Nǐ hǎo! Jīntiān guò de zěnmeyàng? Xiǎng hé wǒ liáo diǎn shénme ne? 😊',
+        vietnamese: 'Chào bạn! Hôm nay thế nào rồi? Muốn cùng mình trò chuyện về điều gì nào? 😊',
+        isPinyinVisible: false,
+        isTranslationVisible: false,
         timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
       },
     ];
@@ -133,11 +201,29 @@ export const YuyanAIProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [messages]);
 
+  // Per-message visibility and bookmark toggles
+  const toggleMessagePinyin = useCallback((id: number) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, isPinyinVisible: !m.isPinyinVisible } : m))
+    );
+  }, []);
+
+  const toggleMessageTranslation = useCallback((id: number) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, isTranslationVisible: !m.isTranslationVisible } : m))
+    );
+  }, []);
+
+  const toggleMessageBookmark = useCallback((id: number) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, isBookmarked: !m.isBookmarked } : m))
+    );
+  }, []);
+
   const openAssistant = useCallback((initialPrompt?: string) => {
     setIsAssistantOpen(true);
     setIsMinimized(false);
     if (initialPrompt) {
-      // Send the initial prompt if requested
       setTimeout(() => {
         void sendMessageInternal(initialPrompt);
       }, 100);
@@ -191,11 +277,15 @@ export const YuyanAIProvider: React.FC<{ children: React.ReactNode }> = ({ child
       {
         id: Date.now(),
         sender: 'ai',
-        text: 'Xin chào! Cuộc hội thoại đã được làm mới. Em muốn hỏi về từ vựng, ngữ pháp hay luyện thi HSK? 😊',
+        text: '你好！ cuộc hội thoại đã được làm mới. Hôm nay bạn muốn luyện chủ đề gì nào? 😊',
+        pinyin: 'Nǐ hǎo! Jīntiān xiǎng liànxí shénme zhǔtí ne?',
+        vietnamese: 'Chào bạn! Cuộc hội thoại đã được làm mới. Hôm nay bạn muốn luyện chủ đề gì nào? 😊',
+        isPinyinVisible: alwaysShowPinyin,
+        isTranslationVisible: alwaysShowTranslation,
         timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
       },
     ]);
-  }, []);
+  }, [alwaysShowPinyin, alwaysShowTranslation]);
 
   const sendMessageInternal = async (text: string, attachment?: AiChatAttachment | null) => {
     if ((!text.trim() && !attachment) || isLoading) return;
@@ -214,35 +304,87 @@ export const YuyanAIProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsLoading(true);
 
     try {
-      const recentHistory = messages.slice(-6).map((m) => ({
-        sender: m.sender,
-        text: m.text,
-      }));
+      const isAcademicQuery =
+        !attachment &&
+        (userText.startsWith('Giải thích') ||
+          userText.startsWith('Phân tích') ||
+          userText.startsWith('So sánh') ||
+          userText.startsWith('Tạo câu ví dụ') ||
+          userText.startsWith('Lập kế hoạch') ||
+          userText.startsWith('Liệt kê'));
 
-      const reply = await aiApiService.sendFreeChatMessage({
-        question: userText,
-        history: recentHistory,
-        attachment: attachment || null,
-        preferredLanguage: voiceSettings.preferredResponseLanguage,
-      });
+      if (isAcademicQuery || attachment) {
+        const recentHistory = messages.slice(-6).map((m) => ({
+          sender: m.sender,
+          text: m.text,
+        }));
 
-      const aiMsg: ChatMessage = {
-        id: Date.now() + 1,
-        sender: 'ai',
-        text: reply,
-        timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-      };
-      setMessages((prev) => [...prev, aiMsg]);
-
-      // Auto-play AI response if enabled in voice settings
-      if (voiceSettings.ttsEnabled && voiceSettings.autoPlayResponses && reply) {
-        void speechSynthesisService.speakBilingual({
-          text: reply,
-          rate: voiceSettings.speechRate,
-          chineseVoiceUri: voiceSettings.chineseVoiceUri,
-          vietnameseVoiceUri: voiceSettings.vietnameseVoiceUri,
-          readingMode: voiceSettings.readingMode,
+        const reply = await aiApiService.sendFreeChatMessage({
+          question: userText,
+          history: recentHistory,
+          attachment: attachment || null,
+          preferredLanguage: voiceSettings.preferredResponseLanguage,
         });
+
+        const aiMsg: ChatMessage = {
+          id: Date.now() + 1,
+          sender: 'ai',
+          text: reply,
+          isPinyinVisible: alwaysShowPinyin,
+          isTranslationVisible: alwaysShowTranslation,
+          timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        };
+        setMessages((prev) => [...prev, aiMsg]);
+
+        if (voiceSettings.ttsEnabled && voiceSettings.autoPlayResponses && reply) {
+          void speechSynthesisService.speakBilingual({
+            text: reply,
+            rate: voiceSettings.speechRate,
+            chineseVoiceUri: voiceSettings.chineseVoiceUri,
+            vietnameseVoiceUri: voiceSettings.vietnameseVoiceUri,
+            readingMode: voiceSettings.readingMode,
+          });
+        }
+      } else {
+        // Natural Chinese Conversation Partner (1-3 sentences)
+        const chatReply = await aiApiService.sendChatMessage({
+          scenario: activeScenario,
+          message: userText,
+          conversationMode,
+          hskLevel,
+          messages: messages.slice(-6).map((m) => ({
+            id: m.id,
+            sender: m.sender,
+            hanzi: m.text,
+            pinyin: m.pinyin || '',
+            vietnamese: m.vietnamese || '',
+            feedback: m.feedback,
+          })),
+        });
+
+        const aiMsg: ChatMessage = {
+          id: Date.now() + 1,
+          sender: 'ai',
+          text: chatReply.hanzi,
+          pinyin: chatReply.pinyin,
+          vietnamese: chatReply.vietnamese,
+          feedback: chatReply.feedback,
+          followUp: chatReply.followUp,
+          isPinyinVisible: alwaysShowPinyin,
+          isTranslationVisible: alwaysShowTranslation,
+          timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        };
+        setMessages((prev) => [...prev, aiMsg]);
+
+        if (voiceSettings.ttsEnabled && voiceSettings.autoPlayResponses && chatReply.hanzi) {
+          void speechSynthesisService.speakBilingual({
+            text: chatReply.hanzi,
+            rate: voiceSettings.speechRate,
+            chineseVoiceUri: voiceSettings.chineseVoiceUri,
+            vietnameseVoiceUri: voiceSettings.vietnameseVoiceUri,
+            readingMode: 'chinese_only',
+          });
+        }
       }
     } catch (err: any) {
       const errorMsg: ChatMessage = {
@@ -274,6 +416,19 @@ export const YuyanAIProvider: React.FC<{ children: React.ReactNode }> = ({ child
         isLanguageModalOpen,
         messages,
         voiceSettings,
+        conversationMode,
+        setConversationMode,
+        activeScenario,
+        setActiveScenario,
+        hskLevel,
+        setHskLevel,
+        alwaysShowPinyin,
+        setAlwaysShowPinyin,
+        alwaysShowTranslation,
+        setAlwaysShowTranslation,
+        toggleMessagePinyin,
+        toggleMessageTranslation,
+        toggleMessageBookmark,
         openAssistant,
         closeAssistant,
         toggleAssistant,

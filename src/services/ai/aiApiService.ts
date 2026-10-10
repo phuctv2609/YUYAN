@@ -286,39 +286,77 @@ class AiApiService {
   }
 
   /**
-   * AI Chat / Conversation Tutor
+   * AI Chat / Native Conversation Tutor (5 Modes: Free, Role-play, Speaking, Correction, HSK)
    */
   async sendChatMessage(params: {
-    scenario: string;
+    scenario?: string;
     message: string;
     messages?: AiChatMessage[];
+    conversationMode?: 'free_chat' | 'roleplay' | 'speaking' | 'correction' | 'hsk';
+    hskLevel?: number;
   }): Promise<{
     hanzi: string;
     pinyin: string;
     vietnamese: string;
     feedback?: string | null;
+    followUp?: string;
   }> {
-    const data = await this.invokeEdgeFunction({
-      action: 'chat',
-      scenario: params.scenario,
-      message: params.message,
-      messages: params.messages,
-    });
+    try {
+      const data = await this.invokeEdgeFunction({
+        action: 'chat',
+        scenario: params.scenario || 'Hội thoại tự do, giao tiếp hàng ngày thân thiện như bạn bè bản xứ',
+        message: params.message,
+        messages: params.messages,
+        conversationMode: params.conversationMode || 'free_chat',
+        hskLevel: params.hskLevel || 2,
+      });
 
-    if (!data.success && data.error) {
-      const err = new Error(data.message || 'Lỗi khi gửi tin nhắn tới AI');
-      (err as any).code = data.error;
+      if (data?.success && data?.reply) {
+        return {
+          hanzi: data.reply.hanzi || '你好！很高兴和你聊天。',
+          pinyin: data.reply.pinyin || '',
+          vietnamese: data.reply.vietnamese || '',
+          feedback: data.reply.feedback || null,
+          followUp: data.reply.followUp || '',
+        };
+      }
+
+      if (data?.error && !data?.success) {
+        throw new Error(data.message || 'Lỗi khi kết nối dịch vụ hội thoại AI');
+      }
+
+      return (
+        data.reply || {
+          hanzi: '对不起，我暂时无法回答。你今天想聊点什么呢？',
+          pinyin: 'Duìbuqǐ, wǒ zànshí wúfǎ huídá. Nǐ jīntiān xiǎng liáo diǎn shénme ne?',
+          vietnamese: 'Xin lỗi, mình tạm thời chưa trả lời được. Hôm nay bạn muốn trò chuyện về chủ đề gì nào?',
+          feedback: null,
+        }
+      );
+    } catch (err: any) {
+      // Graceful conversational fallback for common greetings and offline scenarios
+      const trimmed = params.message.trim().toLowerCase();
+      if (/^(你好|您好|hi|hello|chào)/i.test(trimmed)) {
+        return {
+          hanzi: '你好呀！😄 很高兴和你聊天。今天过得怎么样？',
+          pinyin: 'Nǐ hǎo ya! 😄 Hěn gāoxìng hé nǐ liáotiān. Jīntiān guò de zěnmeyàng?',
+          vietnamese: 'Chào bạn nha! 😄 Rất vui được trò chuyện cùng bạn. Hôm nay của bạn thế nào rồi?',
+          feedback: null,
+          followUp: '今天过得怎么样？',
+        };
+      }
+      if (/^(大家好)/i.test(trimmed)) {
+        return {
+          hanzi: '大家好！欢迎来到中文学习角。今天想聊些什么呢？',
+          pinyin: 'Dàjiā hǎo! Huānyíng lái dào zhōngwén xuéxí jiǎo. Jīntiān xiǎng liáo xiē shénme ne?',
+          vietnamese: 'Chào mọi người! Chào mừng bạn đến góc học tiếng Trung. Hôm nay muốn trò chuyện về điều gì nào?',
+          feedback: null,
+          followUp: '今天想聊些什么呢？',
+        };
+      }
+      // Re-throw if other error
       throw err;
     }
-
-    return (
-      data.reply || {
-        hanzi: '对不起，我暂时无法回答。',
-        pinyin: 'Duìbuqǐ, wǒ zànshí wúfǎ huídá.',
-        vietnamese: 'Xin lỗi, tôi tạm thời chưa thể trả lời.',
-        feedback: null,
-      }
-    );
   }
 
   /**

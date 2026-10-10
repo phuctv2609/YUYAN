@@ -335,9 +335,12 @@ Chú ý: Cung cấp đúng ít nhất 3 câu ví dụ ("examples"), đầy đủ
     }
 
     // 3. AI CHAT / CONVERSATION TUTOR
+    // 3. AI CHAT / CONVERSATION TUTOR (5 MODES: Free, Role-play, Speaking, Correction, HSK)
     if (action === 'chat') {
       const messages = Array.isArray(body.messages) ? body.messages : [];
+      const mode = body.conversationMode || body.mode || 'free_chat';
       const scenario = body.scenario || 'Chào hỏi & Giao tiếp thông thường';
+      const hskLevel = body.hskLevel || body.level || 2;
       const userMessage = (body.message || '').trim();
 
       if (!userMessage && messages.length === 0) {
@@ -350,28 +353,45 @@ Chú ý: Cung cấp đúng ít nhất 3 câu ví dụ ("examples"), đầy đủ
       // Format previous conversation context
       const conversationHistory = messages
         .slice(-6)
-        .map((m: any) => `${m.sender === 'user' ? 'Học viên' : 'Gia sư YUYAN'}: ${m.hanzi || m.text}`)
+        .map((m: any) => `${m.sender === 'user' ? 'Học viên' : 'Bạn hội thoại YUYAN'}: ${m.hanzi || m.text}`)
         .join('\n');
 
-      const prompt = `Bạn là Gia sư Hội thoại Tiếng Trung AI thông minh thuộc nền tảng học YUYAN.
-Ngữ cảnh giao tiếp hiện tại: "${scenario}".
-Nhiệm vụ của bạn:
-1. Trò chuyện tự nhiên, thân thiện với học viên bằng tiếng Trung chuẩn phổ thông (giản thể).
-2. Phản hồi phải phù hợp với trình độ giao tiếp của học viên, độ dài vừa phải (1-3 câu).
-3. Luôn cung cấp kèm phiên âm Pinyin có thanh điệu chuẩn và bản dịch tiếng Việt tự nhiên.
-4. Nếu học viên có lỗi diễn đạt hoặc ngữ pháp trong câu trước, hãy đưa ra lời nhận xét sư phạm ngắn gọn (bằng tiếng Việt) ở trường "feedback".
+      let modeDirective = '';
+      if (mode === 'roleplay') {
+        modeDirective = `CHẾ ĐỘ TÌNH HUỐNG (情景对话): Hãy nhập vai hoàn toàn vào ngữ cảnh "${scenario}". Nói năng tự nhiên đúng tư cách nhân vật (ví dụ: nhân viên phục vụ, nhân viên bán hàng, đồng nghiệp). Giữ câu thoại 1-3 câu sinh động, kết thúc bằng một câu hỏi hoặc phản hồi phù hợp tình huống.`;
+      } else if (mode === 'speaking') {
+        modeDirective = `CHẾ ĐỘ LUYỆN NÓI (口语练习): Đóng vai người bạn trò chuyện bản xứ. Dùng từ ngữ khẩu ngữ tự nhiên, ngắn gọn (1-2 câu), ngữ điệu sinh động, dễ nói theo và khuyến khích học viên nói tiếp.`;
+      } else if (mode === 'correction') {
+        modeDirective = `CHẾ ĐỘ SỬA LỖI (纠错模式):
+1. Vẫn trả lời tự nhiên vào câu chuyện của học viên bằng tiếng Trung (1-2 câu).
+2. Nếu học viên có lỗi sai ngữ pháp, dùng từ gượng gạo hoặc sai trật tự từ tiếng Trung, hãy đưa ra một gợi ý ngắn gọn, tế nhị bằng tiếng Việt ở trường "feedback" (dạng: "💡 Gợi ý: [cách nói tự nhiên hơn]..."). Nếu câu của học viên đã tự nhiên thì để "feedback": null.`;
+      } else if (mode === 'hsk') {
+        modeDirective = `CHẾ ĐỘ THỰC CHIẾN HSK (HSK实战): Bạn đang trò chuyện với người học trình độ HSK ${hskLevel}. Hãy chủ động sử dụng cấu trúc ngữ pháp và từ vựng phù hợp chuẩn HSK ${hskLevel}, câu văn rõ ràng, không dùng tiếng lóng quá khó.`;
+      } else {
+        modeDirective = `CHẾ ĐỘ TRÒ CHUYỆN TỰ DO (自由聊天 - MẶC ĐỊNH):
+- Bạn là một người bạn Trung Quốc bản xứ thân thiện, vui vẻ, thích trò chuyện hàng ngày.
+- Trò chuyện tự nhiên, ngắn gọn (1-3 câu tiếng Trung), giống như đang nhắn tin trên WeChat.
+- TUYỆT ĐỐI KHÔNG giảng bài, KHÔNG tự giới thiệu trang trọng, KHÔNG đưa ra danh sách giáo trình trừ khi học viên yêu cầu.
+- Luôn phản hồi trực tiếp vào điều học viên vừa nói và kết thúc bằng MỘT câu hỏi mở tự nhiên để tiếp tục duy trì hội thoại.
+- Ví dụ: Học viên nói "大家好！", bạn chỉ cần đáp: "大家好呀！😄 今天过得怎么样？"`;
+      }
+
+      const prompt = `Bạn là bạn đồng hành hội thoại tiếng Trung bản xứ của nền tảng YUYAN.
+Ngữ cảnh / Chủ đề: "${scenario}".
+${modeDirective}
 
 Lịch sử trò chuyện gần nhất:
-${conversationHistory}
+${conversationHistory || '(Bắt đầu cuộc trò chuyện mới)'}
 
 Câu nói mới nhất của học viên: "${userMessage}"
 
-YÊU CẦU ĐẦU RA (JSON DUY NHẤT):
+YÊU CẦU ĐẦU RA (JSON DUY NHẤT, KHÔNG CÓ MARKDOWN HAY CHỮ BAO NGOÀI):
 {
-  "hanzi": "Câu trả lời tiếng Trung của Gia sư",
+  "hanzi": "Câu trả lời tiếng Trung tự nhiên, ngắn gọn (1-3 câu)",
   "pinyin": "Phiên âm Pinyin đầy đủ dấu thanh điệu",
-  "vietnamese": "Bản dịch nghĩa tiếng Việt tự nhiên",
-  "feedback": "Nhận xét sư phạm ngắn gọn nếu học viên có lỗi sai ngữ pháp/từ vựng (hoặc null nếu câu của học viên đã tự nhiên)"
+  "vietnamese": "Bản dịch tiếng Việt tự nhiên",
+  "feedback": "Nhận xét nhẹ nhàng ngắn gọn nếu có lỗi sai (hoặc null nếu câu của học viên đã tự nhiên)",
+  "followUp": "Câu hỏi mở tự nhiên để tiếp tục trò chuyện"
 }`;
 
       const geminiRes = await callGemini(geminiKey, prompt, true);
@@ -584,7 +604,22 @@ YÊU CẦU ĐẦU RA (JSON DUY NHẤT, KHÔNG CÓ MARKDOWN HOẶC TEXT KHÁC):
         }
       }
 
-      const promptText = `Bạn là Cố vấn Sư phạm Hán ngữ Cao cấp (Senior AI Chinese Tutor) thuộc nền tảng YUYAN (Khẩu hiệu: "Học tiếng Trung theo cách của bạn.").
+      const isCasualChat = !attachment && !contextItem && (
+        /^(你好|您好|哈喽|嗨|早上好|晚上好|大家好|吃了吗|最近怎么样|在吗|hi|hello|hey)[\s!！?？~～]*$/i.test(question) ||
+        (question.length <= 25 && /[\u4e00-\u9fa5]/.test(question) && !/(tại sao|nghĩa là gì|giải thích|phân tích|ngữ pháp|cách dùng|khác nhau|bài tập|đề thi)/i.test(question))
+      );
+
+      const promptText = isCasualChat
+        ? `Bạn là bạn đồng hành hội thoại tiếng Trung bản xứ (Native Chinese Conversation Partner) thân thiện, tự nhiên.
+Học viên đang nhắn tin trò chuyện với bạn: "${question}".
+Lịch sử trò chuyện gần nhất:
+${formattedHistory || '(Bắt đầu hội thoại)'}
+
+QUY TẮC BẮT BUỘC:
+1. Trả lời trực tiếp, tự nhiên, súc tích (1-3 câu tiếng Trung giản thể, sinh động như bạn bè nhắn tin trên WeChat).
+2. TUYỆT ĐỐI KHÔNG giảng bài, KHÔNG tự giới thiệu trang trọng, KHÔNG đưa ra bảng phân tích hay danh sách giáo trình.
+3. Luôn kết thúc bằng 1 câu hỏi mở tự nhiên để tiếp tục trò chuyện.`
+        : `Bạn là Cố vấn Sư phạm Hán ngữ Cao cấp (Senior AI Chinese Tutor) thuộc nền tảng YUYAN (Khẩu hiệu: "Học tiếng Trung theo cách của bạn.").
 Nhiệm vụ: Trả lời câu hỏi và hướng dẫn học tiếng Trung cho người học một cách sư phạm, chuẩn mực, chu đáo và dễ hiểu.
 ${contextPrompt}
 ${attachmentPrompt}

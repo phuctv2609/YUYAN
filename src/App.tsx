@@ -26,6 +26,7 @@ import { ThemeProvider } from './context/ThemeContext.tsx';
 import { ToastProvider, useToast } from './components/ui/Toast.tsx';
 import { ErrorBoundary } from './components/ui/ErrorBoundary.tsx';
 import { MandarinVoiceHelpModal } from './components/ui/MandarinVoiceHelpModal.tsx';
+import { MoreFeaturesModal } from './components/ui/MoreFeaturesModal.tsx';
 import { YuyanAIProvider } from './context/YuyanAIContext.tsx';
 import { YuyanAIFloatingButton } from './components/ai/YuyanAIFloatingButton.tsx';
 import { YuyanChatPanel } from './components/ai/YuyanChatPanel.tsx';
@@ -47,6 +48,31 @@ interface RouteState {
 
 const STORAGE_KEY = 'yuyan_study_state_v1';
 
+const VALID_TABS = [
+  'dashboard',
+  'lesson',
+  'beginner',
+  'vocabulary',
+  'specialized',
+  'grammar',
+  'listening',
+  'speaking',
+  'writing',
+  'hanzi',
+  'radicals',
+  'sentence-ordering',
+  'mistakes',
+  'pinyin',
+  'exam',
+  'ai',
+  'dictionary',
+  'progress',
+  'community',
+  'settings',
+  'profile',
+  'account',
+];
+
 function parseUrl(pathname: string): RouteState {
   const path = pathname.replace(/\/+$/, '') || '/';
 
@@ -62,6 +88,11 @@ function parseUrl(pathname: string): RouteState {
   // Support /tu-dien alias
   if (path === '/tu-dien') {
     return { tab: 'dictionary', level: 1, lessonNumber: 1, isNotFound: false };
+  }
+
+  // Support /ai-conversation, /conversation, /hoi-thoai-ai alias for /ai
+  if (path === '/ai-conversation' || path === '/conversation' || path === '/hoi-thoai-ai') {
+    return { tab: 'ai', level: 1, lessonNumber: 1, isNotFound: false };
   }
 
   // Support /profile, /account, /profile/settings, /ho-so aliases
@@ -112,31 +143,8 @@ function parseUrl(pathname: string): RouteState {
     return { tab: 'lesson', level: 1, lessonNumber: 1, isNotFound: true };
   }
 
-  // Standard modules
-  const validTabs = [
-    'beginner',
-    'vocabulary',
-    'specialized',
-    'grammar',
-    'listening',
-    'speaking',
-    'writing',
-    'hanzi',
-    'radicals',
-    'sentence-ordering',
-    'mistakes',
-    'pinyin',
-    'exam',
-    'ai',
-    'dictionary',
-    'progress',
-    'community',
-    'settings',
-    'profile',
-    'account',
-  ];
   const tabName = path.replace(/^\//, '');
-  if (validTabs.includes(tabName)) {
+  if (VALID_TABS.includes(tabName)) {
     return { tab: tabName, level: 1, lessonNumber: 1, isNotFound: false };
   }
 
@@ -148,7 +156,28 @@ const AppContent: React.FC = () => {
   const [route, setRoute] = useState<RouteState>(() => parseUrl(window.location.pathname));
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState<boolean>(false);
+  const [isMoreFeaturesOpen, setIsMoreFeaturesOpen] = useState<boolean>(false);
   const { showToast } = useToast();
+
+  // Support query params: ?tab=..., ?view=..., ?more=open
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const target = params.get('tab') || params.get('view');
+      if (target) {
+        if (target === 'ai_conversation' || target === 'ai-conversation') {
+          setRoute({ tab: 'ai', level: 1, lessonNumber: 1, isNotFound: false });
+        } else if (VALID_TABS.includes(target)) {
+          setRoute({ tab: target, level: 1, lessonNumber: 1, isNotFound: false });
+        }
+      }
+      if (params.get('more') === 'open') {
+        setIsMoreFeaturesOpen(true);
+      }
+    } catch {
+      // Ignore URL parsing errors
+    }
+  }, []);
 
   // Load last studied lesson on clean startup if at root
   useEffect(() => {
@@ -251,9 +280,11 @@ const AppContent: React.FC = () => {
 
       {/* Top Navbar with Search Modal trigger & Theme Switcher */}
       <TopNavbar
+        currentTab={route.tab}
         onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
         onOpenSearchModal={() => setIsSearchModalOpen(true)}
         onSelectTab={handleSelectTab}
+        onOpenMoreFeatures={() => setIsMoreFeaturesOpen(true)}
       />
 
       {/* Global Search Dialog (Ctrl+K) */}
@@ -398,7 +429,10 @@ const AppContent: React.FC = () => {
           </div>
         ) : route.tab === 'ai' ? (
           <div className="w-full pb-24 md:pb-12">
-            <AiConversationView />
+            <AiConversationView
+              onSelectTab={handleSelectTab}
+              onOpenMoreFeatures={() => setIsMoreFeaturesOpen(true)}
+            />
           </div>
         ) : (
           /* Secondary Fallback Page with Live HSK Lesson Link */
@@ -432,8 +466,19 @@ const AppContent: React.FC = () => {
         )}
       </main>
 
-      {/* Mobile Bottom Navigation */}
-      <MobileBottomNav currentTab={route.tab} onSelectTab={handleSelectTab} />
+      {/* Mobile Bottom Navigation with functional Thêm trigger */}
+      <MobileBottomNav
+        currentTab={route.tab}
+        onSelectTab={handleSelectTab}
+        onOpenMoreFeatures={() => setIsMoreFeaturesOpen(true)}
+      />
+
+      {/* More Features Drawer / Modal for Desktop PC and Mobile */}
+      <MoreFeaturesModal
+        isOpen={isMoreFeaturesOpen}
+        onClose={() => setIsMoreFeaturesOpen(false)}
+        onSelectTab={(tab) => navigate({ tab })}
+      />
 
       {/* Global Yuyan AI Floating Assistant & Interactive Modals */}
       <YuyanAIFloatingButton />
