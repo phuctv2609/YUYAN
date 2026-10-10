@@ -25,6 +25,7 @@ import { SpecializedVocabularyView } from './components/modules/SpecializedVocab
 import { ThemeProvider } from './context/ThemeContext.tsx';
 import { ToastProvider, useToast } from './components/ui/Toast.tsx';
 import { ErrorBoundary } from './components/ui/ErrorBoundary.tsx';
+import { MandarinVoiceHelpModal } from './components/ui/MandarinVoiceHelpModal.tsx';
 import { lessonRepository } from './data/hsk/lessonRepository.ts';
 import { BookOpen, AlertCircle } from 'lucide-react';
 
@@ -260,6 +261,9 @@ const AppContent: React.FC = () => {
           navigate({ tab });
         }}
       />
+
+      {/* Mandarin Voice Help Modal for missing zh-CN system speech package */}
+      <MandarinVoiceHelpModal />
 
       {/* Main Single Document Scroll Container */}
       <main

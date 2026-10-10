@@ -9,3 +9,4 @@ export * from './audioManager';
 export * from './providers/browserTTSProvider';
 export * from './providers/staticAudioProvider';
 export * from './providers/externalTTSProvider';
+export * from './audioRecordingService';

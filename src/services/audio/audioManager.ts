@@ -16,7 +16,7 @@ import { browserTTSProvider } from './providers/browserTTSProvider';
 import { externalTTSProvider } from './providers/externalTTSProvider';
 import { IAudioProvider } from './audioProvider';
 import { AUDIO_ERRORS } from './audioErrors';
-import { sanitizeChineseSpeechText } from './audioUtils';
+import { resolveMandarinPhoneticText } from './audioUtils';
 
 export class AudioManager {
   private currentRequestId: number = 0;
@@ -66,7 +66,8 @@ export class AudioManager {
     target: PronunciationTarget,
     options?: Partial<AudioTrackMetadata>
   ): Promise<void> {
-    const cleanText = sanitizeChineseSpeechText(target.text);
+    const rawTarget = target.hanzi || target.text;
+    const cleanText = resolveMandarinPhoneticText(rawTarget, target.type);
     if (!cleanText) {
       this.handleError(AUDIO_ERRORS.AUDIO_001('Mục tiêu phát âm trống'));
       return;
@@ -95,7 +96,7 @@ export class AudioManager {
     text: string,
     metadata?: Partial<AudioTrackMetadata>
   ): Promise<void> {
-    const cleanText = sanitizeChineseSpeechText(text);
+    const cleanText = resolveMandarinPhoneticText(text, metadata?.entityType);
     if (!cleanText) {
       this.handleError(AUDIO_ERRORS.AUDIO_001('Văn bản tiếng Trung trống'));
       return;

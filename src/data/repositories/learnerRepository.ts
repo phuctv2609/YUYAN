@@ -33,8 +33,13 @@ const LEGACY_STORAGE_KEY = 'yuyan_learner_profile_v1';
 
 import { learningProgressService } from '../../services/progress/learningProgressService.ts';
 
+export function isValidUUID(str?: string): boolean {
+  if (!str) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+}
+
 const DEFAULT_PROFILE: StudentProfile = {
-  id: 'yuyan_std_001',
+  id: typeof window !== 'undefined' ? getLearnerSessionId() : '00000000-0000-4000-a000-000000000001',
   displayName: 'Minh Anh',
   name: 'Minh Anh',
   schoolEmail: 'minhanh@yuyan.edu.vn',
@@ -173,15 +178,26 @@ export class LearnerRepository {
     const updated = this.updateProfile(updates);
     let emailConfirmationPending = false;
 
-    // 2. Synchronize to Supabase (Database + Auth)
+    // 2. Synchronize to learningProgressService
+    void learningProgressService.updateProfile({
+      displayName: updated.displayName,
+      schoolEmail: updated.schoolEmail,
+      targetHskLevel: updated.targetHskLevel,
+      dailyGoalMinutes: updated.dailyGoalMinutes,
+      avatar: updated.avatar,
+    });
+
+    // 3. Synchronize to Supabase (Database + Auth)
     try {
       const supabase = getSupabaseClient();
       if (supabase) {
+        let authUserId: string | undefined;
         // A. Check for authenticated user in Supabase Auth
         try {
           const { data: authUserRes } = await supabase.auth.getUser();
           const user = authUserRes?.user;
           if (user) {
+            authUserId = user.id;
             const authPayload: { data?: { display_name?: string; full_name?: string }; email?: string } = {};
             if (updates.displayName) {
               authPayload.data = {
@@ -206,14 +222,16 @@ export class LearnerRepository {
           console.warn('Supabase Auth sync check skipped (non-fatal):', authErr);
         }
 
-        // B. Upsert into learner_profiles table
-        const profileId = updated.id || getLearnerSessionId();
+        // B. Upsert into learner_profiles table using valid UUID
+        const effectiveId = authUserId || (isValidUUID(updated.id) ? updated.id : getLearnerSessionId());
         await supabase.from('learner_profiles').upsert({
-          id: profileId,
+          id: effectiveId,
           display_name: updated.displayName,
+          school_email: updated.schoolEmail,
           daily_goal_minutes: updated.dailyGoalMinutes,
           target_hsk_level: updated.targetHskLevel,
           streak_days: updated.studyStreakDays,
+          avatar_url: updated.avatar || null,
           updated_at: new Date().toISOString(),
         });
       }
@@ -243,10 +261,11 @@ export class LearnerRepository {
       if (data) {
         const parsed = JSON.parse(data);
         const displayName = parsed.displayName?.trim() || parsed.name?.trim() || DEFAULT_PROFILE.displayName;
+        const validId = isValidUUID(parsed.id) ? parsed.id : getLearnerSessionId();
         return {
           ...DEFAULT_PROFILE,
           ...parsed,
-          id: parsed.id || DEFAULT_PROFILE.id,
+          id: validId,
           displayName,
           name: displayName,
           schoolEmail: parsed.schoolEmail?.trim() || DEFAULT_PROFILE.schoolEmail,

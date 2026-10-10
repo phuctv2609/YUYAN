@@ -1,17 +1,39 @@
 /**
- * YUYAN Grammar Repository
- * Access to authoritative grammar patterns across HSK 1–6 with Supabase integration and offline cache.
+ * YUYAN — Authoritative Grammar Repository
+ * Built on GF0025-2021 (Standards for Chinese Proficiency in International Chinese Language Education)
+ * and Standard HSK 1–6 Curricula.
+ * Includes complete formulas (positive, negative, question), bilingual examples,
+ * Vietnamese learner common pitfalls, and interactive practice exercises.
  */
 
 import { getSupabaseClient } from '../../services/supabase/client';
 
+export interface GrammarExercise {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation: string;
+}
+
+export interface CommonMistake {
+  wrong: string;
+  correct: string;
+  reason: string;
+}
+
 export interface GrammarPoint {
   id: string;
   level: number;
+  gfLevel?: string;
+  category: string;
   lessonId?: string;
   lessonNumber?: number;
   title: string;
   pattern: string;
+  positivePattern?: string;
+  negativePattern?: string;
+  interrogativePattern?: string;
   explanation: string;
   structureSummary?: string;
   examples: Array<{
@@ -19,422 +41,717 @@ export interface GrammarPoint {
     pinyin: string;
     vietnamese: string;
   }>;
+  commonMistakes?: CommonMistake[];
+  practiceExercises?: GrammarExercise[];
   notes?: string;
   sortOrder?: number;
 }
 
-const AUTHORITATIVE_GRAMMAR_POINTS: GrammarPoint[] = [
-  // HSK 1
+export const AUTHORITATIVE_GRAMMAR_POINTS: GrammarPoint[] = [
+  // ==========================================
+  // HSK 1 (GF0025-2021 SƠ CẤP CẤP 1)
+  // ==========================================
   {
     id: 'gram_hsk1_01',
     level: 1,
+    gfLevel: 'Sơ cấp Cấp 1',
+    category: 'Câu phán đoán',
     lessonId: 'hsk1-bai01',
     lessonNumber: 1,
-    title: 'Câu phán đoán với 是 (shì)',
+    title: 'Câu phán đoán với 是 (shì) — Là',
     pattern: 'Chủ ngữ + 是 + Danh từ / Đại từ',
-    explanation: 'Dùng để khẳng định một người hay sự vật là ai hoặc cái gì. Thể phủ định dùng 不是 (bù shì).',
+    positivePattern: 'S + 是 + N (Ví dụ: 我是学生。)',
+    negativePattern: 'S + 不是 + N (Ví dụ: 他不是老师。)',
+    interrogativePattern: 'S + 是 + N + 吗？ / S + 是不是 + N？',
+    explanation: 'Dùng để khẳng định hoặc xác định danh tính, nghề nghiệp, quốc tịch hoặc quan hệ của một người/sự vật. Thể phủ định bắt buộc dùng 不是 (bù shì).',
     structureSummary: 'S + 是/不是 + N',
     examples: [
       { hanzi: '我是中国人。', pinyin: 'Wǒ shì Zhōngguórén.', vietnamese: 'Tôi là người Trung Quốc.' },
-      { hanzi: '他不是老师。', pinyin: 'Tā bù shì lǎoshī.', vietnamese: 'Anh ấy không phải là giáo viên.' }
+      { hanzi: '他不是老师，他是医生。', pinyin: 'Tā bù shì lǎoshī, tā shì yīshēng.', vietnamese: 'Anh ấy không phải là giáo viên, anh ấy là bác sĩ.' },
+      { hanzi: '你是王经理吗？', pinyin: 'Nǐ shì Wáng jīnglǐ ma?', vietnamese: 'Bạn có phải là Giám đốc Vương không?' },
     ],
-    notes: 'Không dùng 是 trước tính từ để miêu tả tính chất.',
-    sortOrder: 1
+    commonMistakes: [
+      {
+        wrong: '今天天气是好。(SAI)',
+        correct: '今天天气很好。(ĐÚNG)',
+        reason: 'Không dùng 是 trước tính từ để miêu tả tính chất. Trong câu vị ngữ tính từ, dùng phó từ chỉ mức độ (很, 非常, 真) thay vì 是.',
+      },
+      {
+        wrong: '我是不越南人。(SAI)',
+        correct: '我不是越南人。(ĐÚNG)',
+        reason: 'Phó từ phủ định 不 phải đặt liền trước 是 tạo thành 不是.',
+      },
+    ],
+    practiceExercises: [
+      {
+        id: 'ex_hsk1_01_1',
+        question: 'Chọn câu phủ định đúng của câu: "她是我的汉语老师。"',
+        options: ['她没是我的汉语老师。', '她不是我的汉语老师。', '她是不我的汉语老师。', '她不我的汉语老师。'],
+        correctAnswer: 1,
+        explanation: 'Phủ định của 是 trong câu phán đoán luôn luôn là 不是.',
+      },
+      {
+        id: 'ex_hsk1_01_2',
+        question: 'Điền từ thích hợp vào chỗ trống: "这本词典 ___ 爸爸送给我的。"',
+        options: ['是', '很', '在', '有'],
+        correctAnswer: 0,
+        explanation: 'Đây là câu phán đoán quan hệ sở hữu/nguồn gốc, dùng 是.',
+      },
+    ],
+    notes: 'Không dùng 是 trước tính từ để miêu tả trạng thái (dùng 很 + Tính từ).',
+    sortOrder: 1,
   },
   {
     id: 'gram_hsk1_02',
     level: 1,
+    gfLevel: 'Sơ cấp Cấp 1',
+    category: 'Trợ từ nghi vấn',
     lessonId: 'hsk1-bai02',
     lessonNumber: 2,
     title: 'Câu hỏi Yes/No với trợ từ nghi vấn 吗 (ma)',
     pattern: 'Mệnh đề trần thuật + 吗？',
-    explanation: 'Đặt ở cuối một câu khẳng định hoặc phủ định để biến câu đó thành câu hỏi xác nhận (Có phải ... không?).',
+    positivePattern: 'Khẳng định + 吗？ (Ví dụ: 你去学校吗？)',
+    negativePattern: 'Phủ định + 吗？ (Ví dụ: 你不喝茶吗？)',
+    interrogativePattern: 'Mệnh đề + 吗？',
+    explanation: 'Đặt ở cuối một câu trần thuật (khẳng định hoặc phủ định) để biến câu đó thành câu hỏi xác nhận có/không (Có phải ... không?).',
     structureSummary: 'Câu trần thuật + 吗？',
     examples: [
       { hanzi: '你好吗？', pinyin: 'Nǐ hǎo ma?', vietnamese: 'Bạn có khỏe không?' },
-      { hanzi: '你是学生吗？', pinyin: 'Nǐ shì xuésheng ma?', vietnamese: 'Bạn có phải là học sinh không?' }
+      { hanzi: '你是学生吗？', pinyin: 'Nǐ shì xuésheng ma?', vietnamese: 'Bạn có phải là học sinh không?' },
+      { hanzi: '明天你来我家吗？', pinyin: 'Míngtiān nǐ lái wǒ jiā ma?', vietnamese: 'Ngày mai bạn có đến nhà tôi không?' },
     ],
-    notes: 'Trong câu đã có đại từ nghi vấn (什么, 谁, 哪) thì KHÔNG dùng 吗.',
-    sortOrder: 2
+    commonMistakes: [
+      {
+        wrong: '你是谁吗？(SAI)',
+        correct: '你是谁？(ĐÚNG)',
+        reason: 'Trong câu đã có đại từ nghi vấn (谁, 什么, 哪, 几) thì KHÔNG được thêm 吗 ở cuối câu.',
+      },
+      {
+        wrong: '你好不好吗？(SAI)',
+        correct: '你好不好？ hoặc 你好吗？(ĐÚNG)',
+        reason: 'Câu hỏi chính phản (好不好) đã mang tính chất nghi vấn, không được dùng kèm 吗.',
+      },
+    ],
+    practiceExercises: [
+      {
+        id: 'ex_hsk1_02_1',
+        question: 'Câu nào sau đây sai ngữ pháp do dùng thừa 吗?',
+        options: ['你想吃米饭吗？', '你叫什么名字吗？', '这是你的汉语书吗？', '明天下午你有空吗？'],
+        correctAnswer: 1,
+        explanation: 'Câu có đại từ nghi vấn 什么 thì không dùng trợ từ 吗.',
+      },
+    ],
+    notes: 'Không dùng 吗 trong câu hỏi chính phản (A不A) hoặc câu đã có đại từ nghi vấn.',
+    sortOrder: 2,
   },
   {
     id: 'gram_hsk1_03',
     level: 1,
+    gfLevel: 'Sơ cấp Cấp 1',
+    category: 'Đại từ nghi vấn',
     lessonId: 'hsk1-bai03',
     lessonNumber: 3,
-    title: 'Đại từ nghi vấn 什么 (shénme) - Cái gì',
-    pattern: 'Chủ ngữ + 动词 + 什么 + (Danh từ)？',
-    explanation: 'Dùng để hỏi về sự vật, sự việc hoặc tên gọi (gì, cái gì). Trật tự từ trong câu hỏi tiếng Trung giữ nguyên vị trí như trong câu trả lời.',
+    title: 'Đại từ nghi vấn 什么 (shénme) — Cái gì',
+    pattern: 'Chủ ngữ + Động từ + 什么 + (Danh từ)？',
+    positivePattern: 'S + V + 什么？ (Ví dụ: 你看什么？)',
+    negativePattern: 'S + 不/没 + V + 什么 (mang nghĩa không ... cái gì)',
+    interrogativePattern: 'S + V + 什么 (+ N)？',
+    explanation: 'Dùng để hỏi về sự vật, sự việc, tên gọi hoặc tính chất danh từ. Trật tự từ trong câu hỏi tiếng Trung giữ nguyên vị trí như trong câu trần thuật, không đảo ngữ.',
     structureSummary: 'S + V + 什么 (+ N)？',
     examples: [
       { hanzi: '你叫什么名字？', pinyin: 'Nǐ jiào shénme míngzi?', vietnamese: 'Bạn tên là gì?' },
-      { hanzi: '这是什么书？', pinyin: 'Zhè shì shénme shū?', vietnamese: 'Đây là sách gì?' }
+      { hanzi: '这是什么书？', pinyin: 'Zhè shì shénme shū?', vietnamese: 'Đây là sách gì?' },
+      { hanzi: '你在看什么？', pinyin: 'Nǐ zài kàn shénme?', vietnamese: 'Bạn đang xem cái gì đấy?' },
     ],
-    notes: 'Trật tự câu hỏi tiếng Trung không đảo ngữ.',
-    sortOrder: 3
+    commonMistakes: [
+      {
+        wrong: '什么是这？(SAI)',
+        correct: '这是什么？(ĐÚNG)',
+        reason: 'Tiếng Trung không đảo ngữ như tiếng Anh (What is this?). Vị trí của từ hỏi đúng bằng vị trí của từ trả lời.',
+      },
+    ],
+    practiceExercises: [
+      {
+        id: 'ex_hsk1_03_1',
+        question: 'Sắp xếp các từ thành câu đúng: "名字 / 什么 / 你 / 叫 / ?"',
+        options: ['什么你叫名字？', '你叫什么名字？', '叫你名字什么？', '名字叫你什么？'],
+        correctAnswer: 1,
+        explanation: 'Trật tự câu hỏi: Chủ ngữ (你) + Động từ (叫) + Đại từ hỏi (什么) + Danh từ (名字).',
+      },
+    ],
+    notes: 'Trật tự câu hỏi tiếng Trung tuân theo nguyên tắc trật tự tự nhiên, không đổi vị trí.',
+    sortOrder: 3,
   },
   {
     id: 'gram_hsk1_04',
     level: 1,
+    gfLevel: 'Sơ cấp Cấp 1',
+    category: 'Trợ từ kết cấu',
     lessonId: 'hsk1-bai04',
     lessonNumber: 4,
-    title: 'Phó từ phủ định 不 (bù) và 没 (méi)',
-    pattern: '不 + Động từ/Tính từ  |  没 + 有 + Danh từ',
-    explanation: '不 dùng để phủ định hành động hiện tại, tương lai, ý chí hoặc tính chất. 没 (hoặc 没有) dùng để phủ định sự sở hữu hoặc hành động đã xảy ra.',
-    structureSummary: '不 + V/Adj  vs  没(有) + N/V',
+    title: 'Trợ từ kết cấu 的 (de) — Quan hệ Sở hữu & Định ngữ',
+    pattern: 'Định ngữ (Chủ sở hữu / Tính chất) + 的 + Trung tâm ngữ (Danh từ)',
+    positivePattern: 'Định ngữ + 的 + Danh từ',
+    negativePattern: 'Không có 的 trong câu phủ định của động từ',
+    interrogativePattern: '这是谁的 + N？',
+    explanation: 'Nối định ngữ với danh từ trung tâm. Biểu thị quan hệ sở hữu (của) hoặc bổ nghĩa miêu tả tính chất. Nếu định ngữ là quan hệ thân thuộc (bố mẹ, anh em) hoặc cơ quan trường học thì có thể lược bỏ 的.',
+    structureSummary: 'Định ngữ + 的 + N',
     examples: [
-      { hanzi: '我不去学校。', pinyin: 'Wǒ bù qù xuéxiào.', vietnamese: 'Tôi không đi đến trường.' },
-      { hanzi: '我没有汉语书。', pinyin: 'Wǒ méiyǒu Hànyǔ shū.', vietnamese: 'Tôi không có sách tiếng Trung.' }
+      { hanzi: '这是我的书。', pinyin: 'Zhè shì wǒ de shū.', vietnamese: 'Đây là sách của tôi.' },
+      { hanzi: '他的电脑很好用。', pinyin: 'Tā de diànnǎo hěn hǎoyòng.', vietnamese: 'Máy tính của anh ấy rất dễ dùng.' },
+      { hanzi: '我（的）爸爸是医生。', pinyin: 'Wǒ (de) bàba shì yīshēng.', vietnamese: 'Bố tôi là bác sĩ (thân thuộc lược bỏ 的).' },
     ],
-    notes: 'Phủ định của 有 bắt buộc phải dùng 没, không được nói 不有.',
-    sortOrder: 4
+    commonMistakes: [
+      {
+        wrong: '书我 (SAI)',
+        correct: '我的书 (ĐÚNG)',
+        reason: 'Người Việt hay dịch thuận "sách tôi" thành 书我. Trong tiếng Trung, định ngữ sở hữu PHẢI đứng trước danh từ trung tâm.',
+      },
+    ],
+    practiceExercises: [
+      {
+        id: 'ex_hsk1_04_1',
+        question: 'Dịch câu "Bạn học của tôi" sang tiếng Trung:',
+        options: ['同学的我', '我的同学', '我同的学', '的我的同学'],
+        correctAnswer: 1,
+        explanation: 'Định ngữ (我) + 的 + Danh từ trung tâm (同学).',
+      },
+    ],
+    notes: 'Quy tắc vàng: Cái gì sở hữu hoặc miêu tả đứng TRƯỚC, vật được sở hữu đứng SAU.',
+    sortOrder: 4,
   },
   {
     id: 'gram_hsk1_05',
     level: 1,
+    gfLevel: 'Sơ cấp Cấp 1',
+    category: 'Câu tồn hiện',
     lessonId: 'hsk1-bai05',
     lessonNumber: 5,
-    title: 'Trợ từ kết cấu 的 (de) biểu thị quan hệ sở hữu',
-    pattern: 'Đại từ / Danh từ + 的 + Danh từ',
-    explanation: 'Đặt giữa định ngữ và trung tâm ngữ để biểu thị quyền sở hữu (của) hoặc quan hệ phụ thuộc.',
-    structureSummary: 'Người sở hữu + 的 + Vật sở hữu',
+    title: 'Động từ biểu thị sở hữu và tồn tại 有 (yǒu) — Có',
+    pattern: 'Chủ ngữ + 有 + Tân ngữ / Địa điểm + 有 + Sự vật',
+    positivePattern: 'S + 有 + O (Ví dụ: 我有一只猫。)',
+    negativePattern: 'S + 没有 + O (Tuyệt đối KHÔNG dùng 不有)',
+    interrogativePattern: 'S + 有没有 + O？ / S + 有 + O + 吗？',
+    explanation: 'Dùng để biểu thị sở hữu (ai có cái gì) hoặc biểu thị sự tồn tại tại một nơi chốn nào đó. Chú ý: Phủ định của 有 BẮT BUỘC là 没有, tuyệt đối không được dùng 不有.',
+    structureSummary: 'S + 有/没有 + O',
     examples: [
-      { hanzi: '我的汉语老师是王老师。', pinyin: 'Wǒ de Hànyǔ lǎoshī shì Wáng lǎoshī.', vietnamese: 'Giáo viên tiếng Trung của tôi là cô Vương.' },
-      { hanzi: '这是他的电脑。', pinyin: 'Zhè shì tā de diànnǎo.', vietnamese: 'Đây là máy tính của anh ấy.' }
+      { hanzi: '我有一本汉语词典。', pinyin: 'Wǒ yǒu yì běn Hànyǔ cídiǎn.', vietnamese: 'Tôi có một cuốn từ điển tiếng Trung.' },
+      { hanzi: '桌子上有一杯热茶。', pinyin: 'Zhuōzi shang yǒu yì bēi rè chá.', vietnamese: 'Trên bàn có một ly trà nóng.' },
+      { hanzi: '他没有中国朋友。', pinyin: 'Tā méiyǒu Zhōngguó péngyou.', vietnamese: 'Anh ấy không có bạn người Trung Quốc.' },
     ],
-    notes: 'Khi nói về người thân trong gia đình hoặc mối quan hệ mật thiết, có thể lược bỏ 的 (ví dụ: 我爸爸).',
-    sortOrder: 5
-  },
-  {
-    id: 'gram_hsk1_06',
-    level: 1,
-    lessonId: 'hsk1-bai06',
-    lessonNumber: 6,
-    title: 'Câu vị ngữ tính từ với 很 (hěn)',
-    pattern: 'Chủ ngữ + 很 + Tính từ',
-    explanation: 'Khi tính từ làm vị ngữ miêu tả tính chất, trước tính từ thường có phó từ mức độ như 很.',
-    structureSummary: 'S + 很 + Adj',
-    examples: [
-      { hanzi: '我很高兴。', pinyin: 'Wǒ hěn gāoxìng.', vietnamese: 'Tôi rất vui.' },
-      { hanzi: '今天天气很好。', pinyin: 'Jīntiān tiānqì hěn hǎo.', vietnamese: 'Hôm nay thời tiết rất đẹp.' }
+    commonMistakes: [
+      {
+        wrong: '我不有钱。(SAI HOÀN TOÀN)',
+        correct: '我没有钱。(ĐÚNG)',
+        reason: 'Trong tiếng Trung không bao giờ tồn tại 不有. Phủ định của 有 duy nhất là 没有.',
+      },
     ],
-    sortOrder: 6
-  },
-  {
-    id: 'gram_hsk1_07',
-    level: 1,
-    lessonId: 'hsk1-bai07',
-    lessonNumber: 7,
-    title: 'Giới từ 在 (zài) biểu thị vị trí',
-    pattern: 'Chủ ngữ + 在 + Nơi chốn + (Động từ)',
-    explanation: 'Dùng để diễn tả một người hay vật đang ở địa điểm nào đó hoặc hành động xảy ra tại nơi chốn đó.',
-    structureSummary: 'S + 在 + Địa điểm (+ V)',
-    examples: [
-      { hanzi: '他在家看书。', pinyin: 'Tā zài jiā kànshū.', vietnamese: 'Anh ấy đang đọc sách ở nhà.' },
-      { hanzi: '我们在学校学习。', pinyin: 'Wǒmen zài xuéxiào xuéxí.', vietnamese: 'Chúng tôi học tập ở trường.' }
+    practiceExercises: [
+      {
+        id: 'ex_hsk1_05_1',
+        question: 'Chọn câu phủ định chính xác:',
+        options: ['他不有车。', '他没车。', '他不没有车。', '他没有是不车。'],
+        correctAnswer: 1,
+        explanation: '他没车 hoặc 他没有车 là đúng. Tuyệt đối không dùng 不有.',
+      },
     ],
-    sortOrder: 7
-  },
-  {
-    id: 'gram_hsk1_08',
-    level: 1,
-    lessonId: 'hsk1-bai08',
-    lessonNumber: 8,
-    title: 'Lượng từ 个 (gè) và kết cấu Số từ + Lượng từ',
-    pattern: 'Số từ + Lượng từ + Danh từ',
-    explanation: 'Trong tiếng Trung, giữa số từ và danh từ bắt buộc phải có lượng từ tương ứng. 个 là lượng từ phổ biến nhất.',
-    structureSummary: 'Số + Lượng từ + Danh từ',
-    examples: [
-      { hanzi: '一个苹果', pinyin: 'yī ge píngguǒ', vietnamese: 'một quả táo' },
-      { hanzi: '三个学生', pinyin: 'sān ge xuésheng', vietnamese: 'ba học sinh' }
-    ],
-    sortOrder: 8
+    notes: 'Phủ định của 有 duy nhất là 没有.',
+    sortOrder: 5,
   },
 
-  // HSK 2
+  // ==========================================
+  // HSK 2 (GF0025-2021 SƠ CẤP CẤP 2)
+  // ==========================================
   {
     id: 'gram_hsk2_01',
     level: 2,
+    gfLevel: 'Sơ cấp Cấp 2',
+    category: 'Trợ từ động thái',
     lessonId: 'hsk2-bai01',
     lessonNumber: 1,
-    title: 'Phó từ chỉ mức độ cao nhất 最 (zuì)',
-    pattern: '最 + Tính từ / Động từ tâm lý',
-    explanation: 'Biểu thị mức độ cao nhất (nhất). Thường đi trước tính từ hoặc động từ chỉ cảm xúc, nhận thức.',
-    structureSummary: '最 + Adj/V tâm lý',
+    title: 'Trợ từ động thái 了 (le) — Hoàn thành hành động',
+    pattern: 'Động từ + 了 + (Tân ngữ / Số lượng)',
+    positivePattern: 'S + V + 了 + O (Ví dụ: 我吃了早饭。)',
+    negativePattern: 'S + 没(有) + V + O (Không dùng 了 trong câu phủ định)',
+    interrogativePattern: 'S + V + 了 + O + 没有？ / S + V + O + 了吗？',
+    explanation: 'Đặt ngay sau động từ để biểu thị hành động đã hoàn tất hoặc thực hiện xong. Chú ý: Khi phủ định, dùng 没(有) trước động từ và BỎ 了 ở sau.',
+    structureSummary: 'S + V + 了 + O',
     examples: [
-      { hanzi: '九月去北京旅游最好。', pinyin: 'Jiǔ yuè qù Běijīng lǚyóu zuì hǎo.', vietnamese: 'Tháng 9 đi du lịch Bắc Kinh là tốt nhất.' },
-      { hanzi: '我最喜欢吃米饭。', pinyin: 'Wǒ zuì xǐhuan chī mǐfàn.', vietnamese: 'Tôi thích ăn cơm nhất.' }
+      { hanzi: '我买了三本书。', pinyin: 'Wǒ mǎi le sān běn shū.', vietnamese: 'Tôi đã mua 3 cuốn sách.' },
+      { hanzi: '他喝了两杯咖啡。', pinyin: 'Tā hē le liǎng bēi kāfēi.', vietnamese: 'Anh ấy đã uống 2 ly cà phê.' },
+      { hanzi: '我昨天没去上班。', pinyin: 'Wǒ zuótiān méi qù shàngbān.', vietnamese: 'Hôm qua tôi không đi làm (không dùng 了).' },
     ],
-    sortOrder: 9
+    commonMistakes: [
+      {
+        wrong: '我昨天没去了学校。(SAI)',
+        correct: '我昨天没去学校。(ĐÚNG)',
+        reason: 'Khi đã có phó từ phủ định 没(有), hành động chưa hoàn thành nên KHÔNG được dùng 了.',
+      },
+    ],
+    practiceExercises: [
+      {
+        id: 'ex_hsk2_01_1',
+        question: 'Chọn câu đúng diễn đạt "Tôi chưa ăn cơm":',
+        options: ['我不吃饱了。', '我没吃了饭。', '我没有吃饭。', '我吃饭不了。'],
+        correctAnswer: 2,
+        explanation: 'Phủ định hành động chưa xảy ra dùng 没有 + V, không dùng 了.',
+      },
+    ],
+    notes: 'Không nhầm lẫn 了 đặt sau động từ (động thái hoàn thành) với 了 ở cuối câu (ngữ khí biến hóa).',
+    sortOrder: 6,
   },
   {
     id: 'gram_hsk2_02',
     level: 2,
-    lessonId: 'hsk2-bai02',
-    lessonNumber: 2,
-    title: 'Cấu trúc so sánh hơn với 比 (bǐ)',
-    pattern: 'A + 比 + B + Tính từ (+ Số lượng/Mức độ)',
-    explanation: 'Dùng để so sánh sự khác biệt về mức độ hoặc tính chất giữa hai đối tượng A và B.',
-    structureSummary: 'A 比 B + Adj (+ 一点儿/得多)',
+    gfLevel: 'Sơ cấp Cấp 2',
+    category: 'Câu nhấn mạnh',
+    lessonId: 'hsk2-bai04',
+    lessonNumber: 4,
+    title: 'Cấu trúc nhấn mạnh 是……的 (shì... de)',
+    pattern: 'Chủ ngữ + 是 + [Thời gian / Địa điểm / Phương thức] + Động từ + 的',
+    positivePattern: 'S + 是 + [Nhấn mạnh] + V + 的',
+    negativePattern: 'S + 不是 + [Nhấn mạnh] + V + 的',
+    interrogativePattern: 'S + 是 + [Từ hỏi] + V + 的？',
+    explanation: 'Dùng cho sự việc ĐÃ XẢY RA trong quá khứ nhằm nhấn mạnh thời gian, địa điểm, phương thức, mục đích hoặc người thực hiện hành động. Trong câu khẳng định, 是 có thể lược bỏ, nhưng 的 bắt buộc phải giữ lại. Trong câu phủ định, bắt buộc dùng 不是...的.',
+    structureSummary: 'S + (是) + [Nhấn mạnh] + V + 的',
     examples: [
-      { hanzi: '今天比昨天冷。', pinyin: 'Jīntiān bǐ zuótiān lěng.', vietnamese: 'Hôm nay lạnh hơn hôm qua.' },
-      { hanzi: '他比我大两岁。', pinyin: 'Tā bǐ wǒ dà liǎng suì.', vietnamese: 'Anh ấy lớn hơn tôi hai tuổi.' }
+      { hanzi: '我是昨天来的。', pinyin: 'Wǒ shì zuótiān lái de.', vietnamese: 'Tôi tới vào ngày hôm qua (nhấn mạnh thời gian).' },
+      { hanzi: '我们是在北京认识的。', pinyin: 'Wǒmen shì zài Běijīng rènshí de.', vietnamese: 'Chúng tôi quen nhau ở Bắc Kinh (nhấn mạnh địa điểm).' },
+      { hanzi: '他是坐飞机去的。', pinyin: 'Tā shì zuò fēijī qù de.', vietnamese: 'Anh ấy đi bằng máy bay (nhấn mạnh phương thức).' },
+      { hanzi: '这件衣服不是在商场买的。', pinyin: 'Zhè jiàn yīfu bú shì zài shāngchǎng mǎi de.', vietnamese: 'Bộ quần áo này không phải mua ở trung tâm thương mại.' },
     ],
-    sortOrder: 10
+    commonMistakes: [
+      {
+        wrong: '我是明天去的。(SAI)',
+        correct: '我明天去。(ĐÚNG)',
+        reason: 'Cấu trúc 是...的 chỉ dùng cho sự việc ĐÃ XẢY RA. Sự việc tương lai không dùng 是...的.',
+      },
+    ],
+    practiceExercises: [
+      {
+        id: 'ex_hsk2_02_1',
+        question: 'Dịch câu "Bạn đến đây bằng cách nào thế?" (nhấn mạnh phương thức):',
+        options: ['你是怎么来的？', '你怎么来了？', '你怎么去的吗？', '是你怎么来吗？'],
+        correctAnswer: 0,
+        explanation: 'Cấu trúc 是...的 với từ hỏi phương thức 怎么: 你是(怎么)来的？',
+      },
+    ],
+    notes: 'Chỉ dùng cho hành động ĐÃ XẢY RA để giải thích rõ chi tiết hoàn cảnh.',
+    sortOrder: 7,
   },
   {
     id: 'gram_hsk2_03',
     level: 2,
-    lessonId: 'hsk2-bai03',
-    lessonNumber: 3,
-    title: 'Cấu trúc nhấn mạnh 是……的 (shì... de)',
-    pattern: 'Chủ ngữ + 是 + [Thời gian/Địa điểm/Phương thức] + Động từ + 的',
-    explanation: 'Dùng khi hành động đã xảy ra trong quá khứ và muốn nhấn mạnh vào thời gian, địa điểm, cách thức thực hiện.',
-    structureSummary: 'S + 是 + [Nhấn mạnh] + V + 的',
+    gfLevel: 'Sơ cấp Cấp 2',
+    category: 'Câu so sánh',
+    lessonId: 'hsk2-bai08',
+    lessonNumber: 8,
+    title: 'Câu so sánh hơn với 比 (bǐ) — Hơn',
+    pattern: 'A + 比 + B + Tính từ / (Động từ + Tân ngữ)',
+    positivePattern: 'A + 比 + B + Adj (+ 一点儿 / 得多 / 数量)',
+    negativePattern: 'A + 没有 + B + (那么/这么) + Adj (Tuyệt đối không dùng A 不比 B)',
+    interrogativePattern: 'A + 比 + B + Adj + 吗？ / A 和 B 哪个更 + Adj？',
+    explanation: 'So sánh mức độ giữa hai đối tượng A và B. Chú ý: Tuyệt đối KHÔNG dùng các phó từ chỉ mức độ như 很, 非常, 真 trước tính từ trong câu chữ 比. Nếu muốn biểu thị mức độ chênh lệch, đặt 一点儿 (một chút) hoặc 得多 / 多了 (rất nhiều) ở SAU tính từ.',
+    structureSummary: 'A + 比 + B + Adj (+ 得多/一点儿)',
     examples: [
-      { hanzi: '我是坐飞机来的。', pinyin: 'Wǒ shì zuò fēijī lái de.', vietnamese: 'Tôi đi bằng máy bay đến đây.' },
-      { hanzi: '我们是去年认识的。', pinyin: 'Wǒmen shì qùnián rènshi de.', vietnamese: 'Chúng tôi quen nhau từ năm ngoái.' }
+      { hanzi: '今天比昨天冷。', pinyin: 'Jīntiān bǐ zuótiān lěng.', vietnamese: 'Hôm nay lạnh hơn hôm qua.' },
+      { hanzi: '哥哥比弟弟高得多。', pinyin: 'Gēge bǐ dìdi gāo de duō.', vietnamese: 'Anh trai cao hơn em trai rất nhiều.' },
+      { hanzi: '这件衣服比那件贵一点儿。', pinyin: 'Zhè jiàn yīfu bǐ nà jiàn guì yìdiǎnr.', vietnamese: 'Chiếc áo này đắt hơn chiếc kia một chút.' },
     ],
-    sortOrder: 11
-  },
-  {
-    id: 'gram_hsk2_04',
-    level: 2,
-    lessonId: 'hsk2-bai04',
-    lessonNumber: 4,
-    title: 'Trợ từ động thái 着 (zhe) biểu thị trạng thái tiếp diễn',
-    pattern: 'Động từ 1 + 着 + (Tân ngữ) + (Động từ 2)',
-    explanation: 'Biểu thị một hành động hoặc trạng thái đang duy trì liên tục.',
-    structureSummary: 'V + 着 / V1 + 着 + V2',
-    examples: [
-      { hanzi: '门开着呢。', pinyin: 'Mén kāi zhe ne.', vietnamese: 'Cửa đang mở đấy.' },
-      { hanzi: '他们笑着说。', pinyin: 'Tāmen xiào zhe shuō.', vietnamese: 'Họ vừa cười vừa nói.' }
+    commonMistakes: [
+      {
+        wrong: '今天比昨天很冷。(SAI NẶNG)',
+        correct: '今天比昨天冷得多。(ĐÚNG)',
+        reason: 'Tuyệt đối KHÔNG đặt 很, 非常 trước tính từ trong câu so sánh 比. Phải dùng 得多 hoặc 多了 ở sau tính từ.',
+      },
+      {
+        wrong: '我不比他高。(Nghĩa là "tôi không cao hơn anh ấy", không mang nghĩa phủ định so sánh thường)',
+        correct: '我没有他高。(ĐÚNG - Tôi không cao bằng anh ấy)',
+        reason: 'Dạng phủ định tự nhiên của câu so sánh là A 没有 B + Adj (A không bằng B).',
+      },
     ],
-    sortOrder: 12
+    practiceExercises: [
+      {
+        id: 'ex_hsk2_03_1',
+        question: 'Câu nào sau đây dùng sai ngữ pháp câu so sánh 比?',
+        options: ['他比我大两岁。', '汉语比英语很难。', '妹妹比姐姐瘦一点儿。', '这趟高铁比飞机便宜得多。'],
+        correctAnswer: 1,
+        explanation: 'Không được dùng 很 trước tính từ 难 trong câu có 比.',
+      },
+    ],
+    notes: 'Quy tắc cấm kỵ: Tuyệt đối không dùng 很, 非常, 十分 đứng trước tính từ trong câu chữ 比.',
+    sortOrder: 8,
   },
 
-  // HSK 3
+  // ==========================================
+  // HSK 3 (GF0025-2021 TRUNG CẤP CẤP 3)
+  // ==========================================
   {
     id: 'gram_hsk3_01',
     level: 3,
-    lessonId: 'hsk3-bai01',
-    lessonNumber: 1,
-    title: 'Cấu trúc 越来越…… (yuè lái yuè...) - Ngày càng...',
-    pattern: 'Chủ ngữ + 越来越 + Tính từ / Động từ tâm lý',
-    explanation: 'Biểu thị sự phát triển hoặc biến đổi mức độ theo thời gian (càng ngày càng...).',
-    structureSummary: 'S + 越来越 + Adj/V',
+    gfLevel: 'Trung cấp Cấp 3',
+    category: 'Câu chữ 把',
+    lessonId: 'hsk3-bai12',
+    lessonNumber: 12,
+    title: 'Câu chữ 把 (bǎ) — Câu xử lý tân ngữ cơ bản',
+    pattern: 'Chủ ngữ + 把 + Tân ngữ + Động từ + Thành phần khác (了/在/到/给...)',
+    positivePattern: 'S + 把 + O + V + 成份 khác (Ví dụ: 我把作业做完了。)',
+    negativePattern: 'S + 没(有) / 别 + 把 + O + V + 成份 khác (Đặt trước 把)',
+    interrogativePattern: 'S + 把 + O + V + Thành phần khác + 了吗？',
+    explanation: 'Dùng khi chủ ngữ tác động hoặc xử lý tân ngữ, khiến tân ngữ thay đổi vị trí, trạng thái hoặc kết quả. Điều kiện bắt buộc: Động từ không được đứng đơn độc mà phải có thành phần khác đi kèm (bổ ngữ kết quả, bổ ngữ xu hướng, 了, v.v.). Phó từ phủ định (没, 别) và động từ năng nguyện (想, 要, 能) phải đứng TRƯỚC 把.',
+    structureSummary: 'S + (没/想) + 把 + O + V + Bổ ngữ/了',
     examples: [
-      { hanzi: '天气越来越热了。', pinyin: 'Tiānqì yuè lái yuè rè le.', vietnamese: 'Thời tiết ngày càng nóng rồi.' },
-      { hanzi: '他的汉语越来越好。', pinyin: 'Tā de Hànyǔ yuè lái yuè hǎo.', vietnamese: 'Tiếng Trung của anh ấy ngày càng tốt.' }
+      { hanzi: '请你把门关上。', pinyin: 'Qǐng nǐ bǎ mén guān shang.', vietnamese: 'Xin bạn hãy đóng cửa lại (关 + xu hướng 上).' },
+      { hanzi: '我把作业做完了。', pinyin: 'Wǒ bǎ zuòyè zuò wán le.', vietnamese: 'Tôi đã làm xong bài tập về nhà rồi (做 + kết quả 完).' },
+      { hanzi: '他把那本书放在桌子上了。', pinyin: 'Tā bǎ nà běn shū fàng zài zhuōzi shang le.', vietnamese: 'Anh ấy đã để cuốn sách đó ở trên bàn rồi.' },
+      { hanzi: '你别把这件事告诉他。', pinyin: 'Nǐ bié bǎ zhè jiàn shì gàosu tā.', vietnamese: 'Bạn đừng nói chuyện này cho anh ấy biết.' },
     ],
-    sortOrder: 13
+    commonMistakes: [
+      {
+        wrong: '我把作业做。(SAI NẶNG)',
+        correct: '我把作业做完了。(ĐÚNG)',
+        reason: 'Động từ trong câu chữ 把 tuyệt đối không được đứng trơ trọi một mình. Bắt buộc có kết quả (完, 好) hoặc 了.',
+      },
+      {
+        wrong: '我把药没吃。(SAI)',
+        correct: '我没把药吃完。(ĐÚNG)',
+        reason: 'Phó từ phủ định (没, 别) và trợ động từ (想, 能, 要) bắt buộc phải đứng TRƯỚC 把.',
+      },
+    ],
+    practiceExercises: [
+      {
+        id: 'ex_hsk3_01_1',
+        question: 'Chọn vị trí đúng của phó từ "没" trong câu: "(A) 他 (B) 把 (C) 衣服洗 (D) 干净。"',
+        options: ['Vị trí (A)', 'Vị trí (B)', 'Vị trí (C)', 'Vị trí (D)'],
+        correctAnswer: 1,
+        explanation: 'Phó từ phủ định 没 phải đứng ngay trước chữ 把 (vị trí B): 他没把衣服洗干净。',
+      },
+    ],
+    notes: 'Quy tắc 3 không của câu chữ 把: 1. Tân ngữ phải xác định. 2. Động từ không đứng trơ trọi. 3. Phủ định và năng nguyện đứng trước 把.',
+    sortOrder: 9,
   },
   {
     id: 'gram_hsk3_02',
     level: 3,
-    lessonId: 'hsk3-bai02',
-    lessonNumber: 2,
-    title: 'Câu chữ 把 (bǎ) cơ bản',
-    pattern: 'Chủ ngữ + 把 + Tân ngữ + Động từ + Thành phần khác',
-    explanation: 'Dùng để nhấn mạnh tác động của chủ ngữ lên đối tượng (tân ngữ), làm biến đổi vị trí, trạng thái hoặc kết quả.',
-    structureSummary: 'S + 把 + O + V + Bổ ngữ/了',
+    gfLevel: 'Trung cấp Cấp 3',
+    category: 'Câu bị động',
+    lessonId: 'hsk3-bai15',
+    lessonNumber: 15,
+    title: 'Câu bị động với 被 (bèi) — Bị / Được',
+    pattern: 'Chủ ngữ (Kẻ chịu tác động) + 被 + (Tác nhân) + Động từ + Thành phần khác',
+    positivePattern: 'Chịu tác động + 被 + (Tác nhân) + V + Bổ ngữ/了',
+    negativePattern: 'Chịu tác động + 没(有) + 被 + (Tác nhân) + V + Bổ ngữ',
+    interrogativePattern: 'Chịu tác động + 被 + Tác nhân + V + Thành phần khác + 吗？',
+    explanation: 'Biểu thị chủ ngữ bị tác động hoặc gánh chịu một kết quả (thường mang sắc thái không mong muốn, hư hại, mất mát). Tác nhân có thể lược bỏ (ví dụ: 蛋糕被吃了). Động từ cũng không được đứng đơn độc mà phải kèm kết quả hoặc 了. Phó từ phủ định 没(有) phải đứng trước 被.',
+    structureSummary: 'O + (没) + 被 + (S) + V + Kết quả/了',
     examples: [
-      { hanzi: '请把书放在桌子上。', pinyin: 'Qǐng bǎ shū fàng zài zhuōzi shang.', vietnamese: 'Xin hãy để sách lên trên bàn.' },
-      { hanzi: '我把作业做完了。', pinyin: 'Wǒ bǎ zuòyè zuò wán le.', vietnamese: 'Tôi đã làm xong bài tập rồi.' }
+      { hanzi: '我的自行车被小偷偷走了。', pinyin: 'Wǒ de zìxíngchē bèi xiǎotōu tōu zǒu le.', vietnamese: 'Xe đạp của tôi bị kẻ trộm lấy cắp mất rồi.' },
+      { hanzi: '桌上的苹果被弟弟吃完了。', pinyin: 'Zhuō shang de píngguǒ bèi dìdi chī wán le.', vietnamese: 'Táo trên bàn đã bị em trai ăn hết rồi.' },
+      { hanzi: '钱包被找到了。', pinyin: 'Qiánbāo bèi zhǎodào le.', vietnamese: 'Ví tiền đã được tìm thấy rồi (lược bỏ tác nhân).' },
     ],
-    sortOrder: 14
+    commonMistakes: [
+      {
+        wrong: '手机被摔坏没有。(SAI)',
+        correct: '手机没被摔坏。(ĐÚNG)',
+        reason: 'Phủ định câu chữ 被 dùng 没 đứng trước 被, không dùng 沒有 ở cuối câu.',
+      },
+    ],
+    practiceExercises: [
+      {
+        id: 'ex_hsk3_02_1',
+        question: 'Chuyển câu sau sang câu bị động: "小狗吃光了盘子里的肉。"',
+        options: [
+          '盘子里的肉被小狗吃光了。',
+          '小狗被盘子里的肉吃光了。',
+          '盘子里的肉吃光了被小狗。',
+          '肉被盘子里吃光了小狗。',
+        ],
+        correctAnswer: 0,
+        explanation: 'Chủ thể chịu tác động (盘子里的肉) + 被 + Tác nhân (小狗) + V (吃光了).',
+      },
+    ],
+    notes: 'Khác với tiếng Việt dùng "được" thoải mái, câu chữ 被 tiếng Trung ban đầu dùng cho sắc thái tiêu cực hoặc bất lợi.',
+    sortOrder: 10,
   },
   {
     id: 'gram_hsk3_03',
     level: 3,
-    lessonId: 'hsk3-bai03',
-    lessonNumber: 3,
-    title: 'Câu bị động với 被 / 叫 / 让 (bèi / jiào / ràng)',
-    pattern: 'Người/Vật bị tác động + 被/叫/让 + Đối tượng + Động từ + Thành phần khác',
-    explanation: 'Dùng để diễn tả một đối tượng bị tác động bởi một đối tượng khác, thường mang sắc thái khách quan hoặc không mong muốn.',
-    structureSummary: 'Bị tác động + 被/叫/让 + Tác động + V + Bổ ngữ',
+    gfLevel: 'Trung cấp Cấp 3',
+    category: 'Bổ ngữ',
+    lessonId: 'hsk3-bai18',
+    lessonNumber: 18,
+    title: 'Bổ ngữ khả năng: V + 得 / 不 + Bổ ngữ kết quả / xu hướng',
+    pattern: 'Khẳng định: V + 得 + C | Phủ định: V + 不 + C',
+    positivePattern: 'V + 得 + Kết quả/Xu hướng (Ví dụ: 我看得到。)',
+    negativePattern: 'V + 不 + Kết quả/Xu hướng (Ví dụ: 我听不懂。)',
+    interrogativePattern: 'V + 得 + C + V + 不 + C？ / V + 得 + C + 吗？',
+    explanation: 'Dùng để biểu thị điều kiện chủ quan hoặc khách quan có cho phép hành động đạt được kết quả hay không. Chú ý: Phủ định dùng V + 不 + C, tuyệt đối không dùng 不能 + V + C để thay thế cho thói quen khẩu ngữ.',
+    structureSummary: 'V + 得/不 + C (懂, 见, 完, 动, 了)',
     examples: [
-      { hanzi: '蛋糕被弟弟吃了。', pinyin: 'Dàngāo bèi dìdi chī le.', vietnamese: 'Bánh ngọt bị em trai ăn mất rồi.' },
-      { hanzi: '我的自行车让人骑走了。', pinyin: 'Wǒ de zìxíngchē ràng rén qí zǒu le.', vietnamese: 'Xe đạp của tôi bị người ta đi mất rồi.' }
+      { hanzi: '老师说得太快，我听不懂。', pinyin: 'Lǎoshī shuō de tài kuài, wǒ tīng bu dǒng.', vietnamese: 'Thầy giáo nói nhanh quá, tôi nghe không hiểu.' },
+      { hanzi: '这么多菜，你吃得完吗？', pinyin: 'Zhème duō cài, nǐ chī de wán ma?', vietnamese: 'Nhiều món thế này, bạn ăn có hết được không?' },
+      { hanzi: '这个箱子太重了，我拿不动。', pinyin: 'Zhè ge xiāngzi tài zhòng le, wǒ ná bu dòng.', vietnamese: 'Chiếc vali này nặng quá, tôi xách không nổi.' },
     ],
-    sortOrder: 15
-  },
-  {
-    id: 'gram_hsk3_04',
-    level: 3,
-    lessonId: 'hsk3-bai04',
-    lessonNumber: 4,
-    title: 'Bổ ngữ kết quả (Resultative Complements)',
-    pattern: 'Động từ + 到 / 见 / 完 / 懂 / 好 / 对 / 错',
-    explanation: 'Tính từ hoặc động từ đặt ngay sau động từ chính để biểu thị kết quả của hành động đó.',
-    structureSummary: 'V + Bổ ngữ kết quả (+ O)',
-    examples: [
-      { hanzi: '我听懂了老师的话。', pinyin: 'Wǒ tīngdǒng le lǎoshī de huà.', vietnamese: 'Tôi đã nghe hiểu lời của giáo viên.' },
-      { hanzi: '饭准备好了。', pinyin: 'Fàn zhǔnbèi hǎo le.', vietnamese: 'Cơm chuẩn bị xong rồi.' }
+    commonMistakes: [
+      {
+        wrong: '我不能听懂。(Gượng gạo)',
+        correct: '我听不懂。(Tự nhiên chuẩn xác)',
+        reason: 'Trong tiếng Trung đời sống, khi nói về năng lực tiếp thu hoặc kết quả không đạt được, luôn ưu tiên bổ ngữ khả năng 听不懂.',
+      },
     ],
-    sortOrder: 16
+    practiceExercises: [
+      {
+        id: 'ex_hsk3_03_1',
+        question: 'Dịch câu "Bạn nhìn thấy rõ chữ trên bảng không?":',
+        options: ['你看得清楚黑板上的字吗？', '你能看清楚不黑板上的字？', '你看清楚得黑板上的字吗？', '你看不能清楚黑板上的字？'],
+        correctAnswer: 0,
+        explanation: 'Khẳng định khả năng nghi vấn: 看得清楚 + 吗？',
+      },
+    ],
+    notes: 'Các cặp phổ biến: 看得懂/看不懂 (hiểu), 听得见/听不见 (nghe thấy), 做得完/做不完 (làm xong).',
+    sortOrder: 11,
   },
 
-  // HSK 4
+  // ==========================================
+  // HSK 4 (GF0025-2021 TRUNG CẤP CẤP 4)
+  // ==========================================
   {
     id: 'gram_hsk4_01',
     level: 4,
-    lessonId: 'hsk4-bai01',
-    lessonNumber: 1,
-    title: 'Cấu trúc tăng tiến 不仅……而且…… (bùjǐn... érqiě...)',
-    pattern: '不仅 + Vế 1，而且 / 也 / 还 + Vế 2',
-    explanation: 'Biểu thị sự tăng tiến mức độ hoặc phạm vi (không những... mà còn...).',
-    structureSummary: '不仅 A, 而且 B',
+    gfLevel: 'Trung cấp Cấp 4',
+    category: 'Liên từ kết hợp',
+    lessonId: 'hsk4-bai03',
+    lessonNumber: 3,
+    title: 'Cấu trúc tiến tầng 不仅……而且…… (bùjǐn... érqiě...) — Không những... mà còn...',
+    pattern: 'Chủ ngữ + 不仅……，而且…… | 不仅 + S1……，S2 + 也/而且……',
+    positivePattern: 'S + 不仅 + V1/Adj1，而且 (还/也) + V2/Adj2',
+    negativePattern: '不仅 không đi liền câu phủ định kép',
+    interrogativePattern: 'Thường dùng trong câu khẳng định tiến tầng',
+    explanation: 'Biểu thị quan hệ tăng tiến từ thấp đến cao (không chỉ có vậy, mà còn phát triển hơn thế). Nếu hai vế cùng một chủ ngữ, chủ ngữ đứng TRƯỚC 不仅. Nếu hai vế khác chủ ngữ, 不仅 phải đứng TRƯỚC chủ ngữ của vế 1.',
+    structureSummary: 'S + 不仅……，而且/还……',
     examples: [
-      { hanzi: '他不仅会说汉语，而且说得非常流利。', pinyin: 'Tā bùjǐn huì shuō Hànyǔ, érqiě shuō de fēicháng liúlì.', vietnamese: 'Anh ấy không những biết nói tiếng Trung mà còn nói rất lưu loát.' },
-      { hanzi: '不仅安娜喜欢音乐，大卫也喜欢。', pinyin: 'Bùjǐn Ānnà xǐhuan yīnyuè, Dàwèi yě xǐhuan.', vietnamese: 'Không chỉ An Na thích âm nhạc mà Đại Vệ cũng thích.' }
+      { hanzi: '他不仅汉语说得流利，而且还会说法语。', pinyin: 'Tā bùjǐn Hànyǔ shuō de liúlì, érqiě hái huì shuō Fǎyǔ.', vietnamese: 'Anh ấy không những nói tiếng Trung lưu loát, mà còn biết nói tiếng Pháp (cùng chủ ngữ 他).' },
+      { hanzi: '不仅我喜欢中国菜，我的家人们也都很喜欢。', pinyin: 'Bùjǐn wǒ xǐhuan Zhōngguó cài, wǒ de jiārénmen yě dōu hěn xǐhuan.', vietnamese: 'Không những tôi thích món Trung Quốc, mà các thành viên trong nhà tôi cũng đều rất thích (khác chủ ngữ).' },
+      { hanzi: '这家餐厅不仅菜品好吃，而且环境也很优雅。', pinyin: 'Zhè jiā cāntīng bùjǐn càipǐn hǎochī, érqiě huánjìng yě hěn yōuyǎ.', vietnamese: 'Nhà hàng này không những đồ ăn ngon, mà không gian cũng rất tao nhã.' },
     ],
-    sortOrder: 17
+    commonMistakes: [
+      {
+        wrong: '我不仅喜欢，而且他也很喜欢。(SAI VỊ TRÍ CHỦ NGỮ)',
+        correct: '不仅我喜欢，而且他也很喜欢。(ĐÚNG)',
+        reason: 'Khi hai vế khác chủ ngữ (我 và 他), 不仅 bắt buộc phải đứng trước chủ ngữ vế đầu.',
+      },
+    ],
+    practiceExercises: [
+      {
+        id: 'ex_hsk4_01_1',
+        question: 'Chọn câu có trật tự từ chuẩn xác:',
+        options: [
+          '不仅小王会开车，而且小李也会。',
+          '小王不仅会开车，而且小李也会。',
+          '会开车不仅小王，而且小李也。',
+          '小王小李不仅开车而且也会。',
+        ],
+        correctAnswer: 0,
+        explanation: 'Khác chủ ngữ (小王 vs 小李) thì 不仅 phải đứng đầu câu trước chủ ngữ 1.',
+      },
+    ],
+    notes: 'Quy tắc vàng: Cùng chủ ngữ đứng sau, khác chủ ngữ đứng trước.',
+    sortOrder: 12,
   },
   {
     id: 'gram_hsk4_02',
     level: 4,
-    lessonId: 'hsk4-bai02',
-    lessonNumber: 2,
-    title: 'Cấu trúc điều kiện duy nhất 只有……才…… (zhǐyǒu... cái...)',
-    pattern: '只有 + Điều kiện duy nhất，才 + Kết quả',
-    explanation: 'Nhấn mạnh điều kiện cần thiết duy nhất để đạt được kết quả (chỉ có... mới...).',
-    structureSummary: '只有 + Điều kiện, (S) + 才 + Kết quả',
-    examples: [
-      { hanzi: '只有努力学习，才能取得好成绩。', pinyin: 'Zhǐyǒu nǔlì xuéxí, cái néng qǔdé hǎo chéngjì.', vietnamese: 'Chỉ có chăm chỉ học tập mới có thể đạt thành tích tốt.' },
-      { hanzi: '只有互相信任，两个人才能成为好朋友。', pinyin: 'Zhǐyǒu hùxiāng xìnrèn, liǎng ge rén cái néng chéngwéi hǎo péngyou.', vietnamese: 'Chỉ có tin tưởng lẫn nhau thì hai người mới có thể trở thành bạn tốt.' }
-    ],
-    sortOrder: 18
-  },
-  {
-    id: 'gram_hsk4_03',
-    level: 4,
-    lessonId: 'hsk4-bai03',
-    lessonNumber: 3,
-    title: 'Cấu trúc nhấn mạnh 连……都 / 也…… (lián... dōu/yě...)',
+    gfLevel: 'Trung cấp Cấp 4',
+    category: 'Câu nhấn mạnh',
+    lessonId: 'hsk4-bai07',
+    lessonNumber: 7,
+    title: 'Cấu trúc nhấn mạnh cực đoan 连……也 / 都…… (lián... yě/dōu...) — Ngay cả... cũng...',
     pattern: '连 + Thành phần cực đoan + 都 / 也 + Động từ / Tính từ',
-    explanation: 'Dùng để đưa ra một trường hợp cực đoan, điển hình nhất nhằm nhấn mạnh tính chất hiển nhiên của sự việc.',
+    positivePattern: '连 + Danh từ/Mệnh đề + 都/也 + V/Adj',
+    negativePattern: '连 + Danh từ + 都/也 + 不/没 + V (Ví dụ: 连一口水都没喝)',
+    interrogativePattern: '你连这个都不知道吗？',
+    explanation: 'Dùng để nhấn mạnh một sự việc cực đoan hoặc bất thường, từ đó ngụ ý rằng các sự việc thông thường khác hiển nhiên cũng như vậy (Ngay cả/Đến cả ... cũng/đều ...). Vế sau bắt buộc phải có 都 hoặc 也.',
     structureSummary: '连 + Cực đoan + 都/也 + V/Adj',
     examples: [
-      { hanzi: '这个问题太简单了，连小孩子都知道。', pinyin: 'Zhè ge wèntí tài jiǎndān le, lián xiǎoháizi dōu zhīdào.', vietnamese: 'Vấn đề này quá đơn giản, ngay cả trẻ con cũng biết.' },
-      { hanzi: '他太忙了，连饭都没时间吃。', pinyin: 'Tā tài máng le, lián fàn dōu méi shíjiān chī.', vietnamese: 'Anh ấy bận quá, ngay cả cơm cũng không có thời gian ăn.' }
+      { hanzi: '这个问题太简单了，连小孩子都明白。', pinyin: 'Zhè ge wèntí tài jiǎndān le, lián xiǎoháizi dōu míngbai.', vietnamese: 'Vấn đề này đơn giản quá, ngay cả trẻ con cũng hiểu.' },
+      { hanzi: '他太忙了，连午饭都没时间吃。', pinyin: 'Tā tài máng le, lián wǔfàn dōu méi shíjiān chī.', vietnamese: 'Anh ấy bận quá, ngay cả cơm trưa cũng không có thời gian ăn.' },
+      { hanzi: '你怎么连一句谢谢都没说就走了？', pinyin: 'Nǐ zěnme lián yí jù xièxie dōu méi shuō jiù zǒu le?', vietnamese: 'Sao bạn ngay cả một câu cảm ơn cũng chưa nói mà đã đi rồi?' },
     ],
-    sortOrder: 19
+    commonMistakes: [
+      {
+        wrong: '连小孩子明白。(SAI THIẾU LIÊN TỪ)',
+        correct: '连小孩子都明白。(ĐÚNG)',
+        reason: 'Sau thành phần đi với 连, bắt buộc phải có 都 hoặc 也 đi kèm.',
+      },
+    ],
+    practiceExercises: [
+      {
+        id: 'ex_hsk4_02_1',
+        question: 'Điền từ còn thiếu: "他太累了，回到家 ___ 衣服都没脱就睡着了。"',
+        options: ['连', '把', '被', '向'],
+        correctAnswer: 0,
+        explanation: 'Cấu trúc 连...也/都: 连衣服都没脱就睡着了。',
+      },
+    ],
+    notes: 'Thường kết hợp với số từ + lượng từ tối thiểu (连一个字都没写, 连一分钱都没有).',
+    sortOrder: 13,
   },
 
-  // HSK 5
+  // ==========================================
+  // HSK 5 (GF0025-2021 CAO CẤP CẤP 5)
+  // ==========================================
   {
     id: 'gram_hsk5_01',
     level: 5,
-    lessonId: 'hsk5-bai01',
-    lessonNumber: 1,
-    title: 'Cấu trúc chuyển ngoặt văn viết 固然……但是…… (gùrán... dànshì...)',
-    pattern: 'A 固然……，但是 / 可是 / 却 B……',
-    explanation: 'Thừa nhận thực tế ở vế A trước (dẫu rằng / cố nhiên), sau đó chuyển ngoặt đưa ra trọng tâm lập luận ở vế B.',
-    structureSummary: 'A 固然..., 但是 B',
-    examples: [
-      { hanzi: '工作固然重要，但是健康更不可忽视。', pinyin: 'Gōngzuò gùrán zhòngyào, dànshì jiànkāng gèng bù kě hūshì.', vietnamese: 'Công việc tuy rằng quan trọng, nhưng sức khỏe càng không thể xem nhẹ.' },
-      { hanzi: '他的意见固然有道理，但目前并不适合实施。', pinyin: 'Tā de yìjiàn gùrán yǒu dàolǐ, dàn mùqián bìng bù shìhé shíshī.', vietnamese: 'Ý kiến của anh ấy cố nhiên có lý, nhưng hiện tại chưa phù hợp để triển khai.' }
-    ],
-    sortOrder: 20
-  },
-  {
-    id: 'gram_hsk5_02',
-    level: 5,
+    gfLevel: 'Cao cấp Cấp 5',
+    category: 'Liên từ thư văn',
     lessonId: 'hsk5-bai02',
     lessonNumber: 2,
-    title: 'Cấu trúc 所 (suǒ) + Động từ trong văn bản chuẩn tắc',
-    pattern: '所 + Động từ đơn/song âm tiết (+ 的 + Danh từ)',
-    explanation: 'Đặt trước động từ để danh từ hóa cụm hành động hoặc biến nó thành định ngữ trang trọng.',
-    structureSummary: '所 + V (+ 的 + N)',
+    title: 'Liên từ kết quả 从而 (cóng\'ér) — Từ đó / Nhờ đó',
+    pattern: 'Hành động / Biện pháp + ，从而 + Kết quả / Mục đích sâu xa',
+    positivePattern: 'Tiền đề/Hành động，从而 + Kết quả tích cực',
+    negativePattern: 'Ít dùng trong mệnh đề phủ định trực tiếp',
+    interrogativePattern: 'Thường dùng trong văn viết nghị luận',
+    explanation: 'Dùng trong văn viết chính luận hoặc học thuật, nối hai phân câu. Phân câu trước nêu ra phương pháp, hành động hoặc tiền đề; 从而 đứng đầu phân câu sau để biểu thị kết quả tất yếu hoặc mục đích tiếp theo đạt được nhờ hành động đó.',
+    structureSummary: 'Biện pháp/Hành động，从而 + Kết quả/Phát triển',
     examples: [
-      { hanzi: '这正是我们所希望看到的结果。', pinyin: 'Zhè zhèng shì wǒmen suǒ xīwàng kàndào de jiéguǒ.', vietnamese: 'Đây chính là kết quả mà chúng tôi kỳ vọng được thấy.' },
-      { hanzi: '据我所知，会议推迟到了下周一。', pinyin: 'Jù wǒ suǒ zhī, huìyì tuīchí dào le xià zhōuyī.', vietnamese: 'Theo như tôi được biết, cuộc họp đã bị hoãn sang thứ Hai tuần sau.' }
+      { hanzi: '公司优化了管理流程，从而大幅提高了生产效率。', pinyin: 'Gōngsī yōuhuà le guǎnlǐ liúchéng, cóng\'ér dàfú tígāo le shēngchǎn xiàolǜ.', vietnamese: 'Công ty đã tối ưu hóa quy trình quản lý, từ đó nâng cao đáng kể hiệu suất sản xuất.' },
+      { hanzi: '多阅读优秀的书籍可以开阔眼界，从而丰富我们的内心世界。', pinyin: 'Duō yuèdú yōuxiù de shūjí kěyǐ kāikuò yǎnjiè, cóng\'ér fēngfù wǒmen de nèixīn shìjiè.', vietnamese: 'Đọc nhiều sách hay có thể mở rộng tầm mắt, nhờ đó làm phong phú thế giới nội tâm của chúng ta.' },
+      { hanzi: '双方加强了沟通与交流，从而消除了长期存在的误解。', pinyin: 'Shuāngfāng jiāqiáng le gōutōng yǔ jiāoliú, cóng\'ér xiāochú le chángqī cúnzài de wùjiě.', vietnamese: 'Hai bên đã tăng cường trao đổi và giao lưu, từ đó xóa bỏ những hiểu lầm tồn tại bấy lâu.' },
     ],
-    sortOrder: 21
+    commonMistakes: [
+      {
+        wrong: '因为天气不好，从而运动会取消了。(SAI NGỮ NGHĨA)',
+        correct: '因为天气不好，所以运动会取消了。(ĐÚNG)',
+        reason: '从而 không tương đương với 所以 trong quan hệ nhân quả đời thường. 从而 chỉ dùng khi vế trước là phương thức/biện pháp tích cực dẫn đến kết quả tiến triển.',
+      },
+    ],
+    practiceExercises: [
+      {
+        id: 'ex_hsk5_01_1',
+        question: 'Chọn liên từ thích hợp: "政府加大了环保投资，___ 明显改善了城市的空气质量。"',
+        options: ['从而', '与其', '固然', '反而'],
+        correctAnswer: 0,
+        explanation: 'Biện pháp (加大环保投资) dẫn tới kết quả phát triển tiếp nối (改善空气质量), dùng 从而.',
+      },
+    ],
+    notes: '从而 = 由此而 (từ cái này mà dẫn tới cái kia), đặc trưng phong cách thư diện văn viết (书面语).',
+    sortOrder: 14,
   },
 
-  // HSK 6
+  // ==========================================
+  // HSK 6 (GF0025-2021 CAO CẤP CẤP 6)
+  // ==========================================
   {
     id: 'gram_hsk6_01',
     level: 6,
-    lessonId: 'hsk6-bai01',
-    lessonNumber: 1,
-    title: 'Cấu trúc phán đoán cao cấp 毋庸置疑 (wúyōng zhìyí) & 不言而喻',
-    pattern: '毋庸置疑 / 不言而喻，+ Mệnh đề khẳng định',
-    explanation: 'Dùng trong văn phong nghị luận học thuật và chính luận để khẳng định một chân lý hoặc thực tế hiển nhiên không thể chối cãi.',
-    structureSummary: '毋庸置疑 / 不言而喻, + Phán đoán',
+    gfLevel: 'Cao cấp Cấp 6',
+    category: 'Phó từ thư văn cao cấp',
+    lessonId: 'hsk6-bai05',
+    lessonNumber: 5,
+    title: 'Phó từ suy đoán tất yếu 势必 (shìbì) — Chắc chắn / Ắt hẳn sẽ',
+    pattern: 'Nguyên nhân / Tình thế + ，势必 + (会) + Kết quả tất yếu khó tránh',
+    positivePattern: 'Tiền đề tình thế，势必 (会) + Hệ quả',
+    negativePattern: 'Ít dùng trong ngữ cảnh phủ định đơn thuần',
+    interrogativePattern: 'Thường dùng trong nghị luận phân tích xu thế',
+    explanation: 'Biểu thị theo đà phát triển của tình thế khách quan thì một kết quả hoặc hệ quả nào đó là điều tất yếu, không thể tránh khỏi (thường là những hậu quả nghiêm trọng hoặc tác động to lớn). Tương đương với "必然", "必定".',
+    structureSummary: 'Tình thế khách quan，势必 + Hệ quả tất yếu',
     examples: [
-      { hanzi: '毋庸置疑，科技创新是推动经济高质量发展的核心动力。', pinyin: 'Wúyōng zhìyí, kējì chuàngxīn shì tuīdòng jīngjì gāo zhìliàng fāzhǎn de héxīn dònglì.', vietnamese: 'Không cần bàn cãi, đổi mới sáng tạo công nghệ là động lực cốt lõi thúc đẩy kinh tế phát triển.' },
-      { hanzi: '保护生态环境的重要性是不言而喻的。', pinyin: 'Bǎohù shēngtài huánjìng de zhòngyàoxìng shì bùyán\'éryù de.', vietnamese: 'Tầm quan trọng của việc bảo vệ môi trường sinh thái là điều hiển nhiên không cần phải nói.' }
+      { hanzi: '如果不及时遏制通货膨胀，势必会影响社会的整体稳定。', pinyin: 'Rúguǒ bù jíshí èzhì tōnghuò péngzhàng, shìbì huì yǐngxiǎng shèhuì de zhěngtǐ wěndìng.', vietnamese: 'Nếu không kịp thời kiềm chế lạm phát, ắt hẳn sẽ ảnh hưởng đến sự ổn định chung của xã hội.' },
+      { hanzi: '科技的飞速发展，势必带来传统产业格局的深刻重塑。', pinyin: 'Kējì de fēisù fāzhǎn, shìbì dàilái chuántǒng chǎnyè géjú de shēnkè chóngsù.', vietnamese: 'Khoa học công nghệ phát triển như vũ bão chắc chắn sẽ định hình lại sâu sắc cục diện các ngành công nghiệp truyền thống.' },
+      { hanzi: '盲目扩张生产规模，势必造成产能过剩与资金链断裂。', pinyin: 'Mángmù kuòzhāng shēngchǎn guīmó, shìbì zàochéng chǎnnéng guòshèng yǔ zījīnliàn duànliè.', vietnamese: 'Mở rộng quy mô sản xuất một cách mù quáng ắt sẽ gây ra dư thừa công suất và đứt gãy dòng tiền.' },
     ],
-    sortOrder: 22
+    commonMistakes: [
+      {
+        wrong: '明天势必会下雨，你带伞吧。(SAI PHONG CÁCH)',
+        correct: '明天肯定会下雨，你带伞吧。(ĐÚNG)',
+        reason: '势必 là từ ngữ văn viết cao cấp (书面语), dùng cho xu thế xã hội, kinh tế hoặc biến động lớn; không dùng cho việc thời tiết sinh hoạt hàng ngày.',
+      },
+    ],
+    practiceExercises: [
+      {
+        id: 'ex_hsk6_01_1',
+        question: 'Chọn từ chính xác điền vào câu phân tích kinh tế: "全球供应链中断，___ 引发大宗商品价格的持续攀升。"',
+        options: ['势必', '索性', '未免', '权且'],
+        correctAnswer: 0,
+        explanation: 'Tình thế (gián đoạn chuỗi cung ứng) ắt hẳn kéo theo kết quả tất yếu (giá hàng hóa tăng), dùng 势必.',
+      },
+    ],
+    notes: '势必 = 根据客观形势，必定如此 (dựa theo thế cục khách quan, ắt hẳn như vậy).',
+    sortOrder: 15,
   },
-  {
-    id: 'gram_hsk6_02',
-    level: 6,
-    lessonId: 'hsk6-bai02',
-    lessonNumber: 2,
-    title: 'Cấu trúc văn ngôn trong Hán ngữ hiện đại: 之, 乎, 者, 也',
-    pattern: 'Cụm từ văn ngôn hoặc thành ngữ bốn chữ có chứa 之/者/乎/也',
-    explanation: 'Các trợ từ và đại từ ngữ khí cổ đại vẫn được bảo lưu mật thiết trong văn bản phân tích chính luận và văn học cao cấp.',
-    structureSummary: 'Văn phong tao nhã cổ ngữ',
-    examples: [
-      { hanzi: '行百里者半九十，越是接近成功越需保持清醒。', pinyin: 'Xíng bǎilǐ zhě bàn jiǔshí, yuè shì jiējìn chénggōng yuè xū bǎochí qīngxǐng.', vietnamese: 'Người đi trăm dặm nửa đường xem như mới được chín mươi, càng gần thành công càng phải giữ sự tỉnh táo.' },
-      { hanzi: '言之有理，持之以恒。', pinyin: 'Yán zhī yǒu lǐ, chí zhī yǐ héng.', vietnamese: 'Nói có lý lẽ, làm việc có lòng kiên trì bền bỉ.' }
-    ],
-    sortOrder: 23
-  }
 ];
 
 export class GrammarRepository {
   private cache: GrammarPoint[] = AUTHORITATIVE_GRAMMAR_POINTS;
 
-  public async fetchServer(): Promise<GrammarPoint[]> {
-    try {
-      const client = getSupabaseClient();
-      if (!client) return this.cache;
-
-      const { data, error } = await (client as any)
-        .from('grammar_patterns')
-        .select('*')
-        .order('hsk_level', { ascending: true })
-        .order('sort_order', { ascending: true });
-
-      if (error || !data || data.length === 0) {
-        return this.cache;
-      }
-
-      this.cache = data.map((row: any) => ({
-        id: row.id,
-        level: row.hsk_level,
-        lessonId: row.lesson_id,
-        lessonNumber: row.sort_order || 1,
-        title: row.title,
-        pattern: row.pattern,
-        explanation: row.explanation,
-        structureSummary: row.structure_summary,
-        examples: row.examples || [],
-        notes: row.notes,
-        sortOrder: row.sort_order
-      }));
-      return this.cache;
-    } catch {
-      return this.cache;
-    }
-  }
-
-  public getByLesson(level: number, lessonNumber: number): GrammarPoint[] {
-    const lessonKey = `hsk${level}-bai${String(lessonNumber).padStart(2, '0')}`;
-    return this.cache.filter((g) => g.level === level && (g.lessonId === lessonKey || g.lessonNumber === lessonNumber));
-  }
-
   public getAll(): GrammarPoint[] {
-    return [...this.cache];
+    return this.cache;
   }
 
   public getByLevel(level: number): GrammarPoint[] {
     return this.cache.filter((g) => g.level === level);
+  }
+
+  public getById(id: string): GrammarPoint | undefined {
+    return this.cache.find((g) => g.id === id);
+  }
+
+  public search(query: string, level?: number): GrammarPoint[] {
+    const q = query.toLowerCase().trim();
+    return this.cache.filter((g) => {
+      const matchLevel = level === undefined || level === 0 || g.level === level;
+      if (!matchLevel) return false;
+      if (!q) return true;
+      return (
+        g.title.toLowerCase().includes(q) ||
+        g.pattern.toLowerCase().includes(q) ||
+        g.explanation.toLowerCase().includes(q) ||
+        g.category.toLowerCase().includes(q) ||
+        g.examples.some((ex) => ex.hanzi.includes(q) || ex.vietnamese.toLowerCase().includes(q))
+      );
+    });
+  }
+
+  public async fetchServer(): Promise<GrammarPoint[]> {
+    const supabase = getSupabaseClient();
+    if (!supabase) return this.cache;
+
+    try {
+      const { data, error } = await (supabase as any)
+        .from('hsk_grammar_points')
+        .select('*')
+        .order('level', { ascending: true })
+        .order('sort_order', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        // Merge server data with authoritative base
+        const serverPoints: GrammarPoint[] = data.map((d: any) => ({
+          id: d.id,
+          level: d.level,
+          gfLevel: d.gf_level || `HSK ${d.level}`,
+          category: d.category || 'Ngữ pháp',
+          title: d.title,
+          pattern: d.pattern,
+          positivePattern: d.positive_pattern,
+          negativePattern: d.negative_pattern,
+          interrogativePattern: d.interrogative_pattern,
+          explanation: d.explanation,
+          structureSummary: d.structure_summary,
+          examples: d.examples || [],
+          commonMistakes: d.common_mistakes || [],
+          practiceExercises: d.practice_exercises || [],
+          notes: d.notes,
+          sortOrder: d.sort_order,
+        }));
+        this.cache = serverPoints;
+        return serverPoints;
+      }
+    } catch {
+      // Offline fallback
+    }
+
+    return this.cache;
   }
 }
 
