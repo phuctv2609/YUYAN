@@ -10,7 +10,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ currentTab, on
   const items = MOBILE_BOTTOM_NAV_IDS.map((id) => getNavItemById(id)).filter(Boolean);
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-md border-t border-border-subtle flex items-center justify-around px-2 py-1.5 safe-bottom">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-nav-bottom bg-surface/95 backdrop-blur-md border-t border-border-subtle flex items-center justify-around px-2 py-1.5 safe-bottom">
       {items.map((item) => {
         if (!item) return null;
         const Icon = item.icon;

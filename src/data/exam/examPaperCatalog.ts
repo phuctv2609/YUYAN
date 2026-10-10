@@ -4,7 +4,7 @@
  * Covers both HSK 2.0 (Levels 1–6) and HSK 3.0 (Levels 1–9 with unified Band 7–9).
  */
 
-import { ExamPaperMetadata } from './examTypes';
+import type { ExamPaperMetadata } from './examTypes.ts';
 
 export const EXAM_PAPER_CATALOG: ExamPaperMetadata[] = [
   // ==========================================================================

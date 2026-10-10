@@ -5,7 +5,7 @@
  * Separated from lesson content and categorized by HSK 2.0 (1–6) & HSK 3.0 (1–9).
  */
 
-import { ExamQuestion } from './examTypes';
+import type { ExamQuestion } from './examTypes.ts';
 
 export const MASTER_EXAM_QUESTION_BANK: ExamQuestion[] = [
   // ==========================================================================

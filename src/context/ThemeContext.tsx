@@ -16,6 +16,11 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<Theme>(() => {
     try {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const urlTheme = params.get('theme');
+        if (urlTheme === 'light' || urlTheme === 'dark') return urlTheme;
+      }
       const saved = localStorage.getItem(THEME_STORAGE_KEY) as Theme;
       if (saved === 'light' || saved === 'dark' || saved === 'system') {
         return saved;

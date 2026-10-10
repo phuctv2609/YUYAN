@@ -3,7 +3,7 @@
  * Strict separation between HSK 2.0 (Levels 1–6) and HSK 3.0 (Levels 1–9).
  */
 
-import { QuestionProvenance, SourceType } from './examSourceRegistry';
+import type { QuestionProvenance, SourceType } from './examSourceRegistry.ts';
 
 export type HskExamVersion = 'hsk2' | 'hsk3';
 

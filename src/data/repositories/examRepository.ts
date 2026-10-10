@@ -4,25 +4,25 @@
  * Supports official section configurations, timing, autosave sessions, and deterministic scoring.
  */
 
-import { getSupabaseClient, getLearnerSessionId } from '../../services/supabase/client';
+import { getSupabaseClient, getLearnerSessionId } from '../../services/supabase/client.ts';
 import {
   OFFICIAL_EXAM_PAPERS,
   OFFICIAL_EXAM_SOURCES,
   getExamCoverageSummary,
-} from '../exam/examPapersInventory';
+} from '../exam/examPapersInventory.ts';
 import {
   EXAM_PAPER_CATALOG,
   getExamPapersByLevel,
   getExamPaperById,
-} from '../exam/examPaperCatalog';
+} from '../exam/examPaperCatalog.ts';
 import {
   MASTER_EXAM_QUESTION_BANK,
   getQuestionsByPaperId,
   getQuestionsByVersionAndLevel,
-} from '../exam/examQuestionBank';
-import { examIngestionService } from '../exam/examIngestionService';
-import { HSK_SOURCE_REGISTRY } from '../exam/examSourceRegistry';
-import {
+} from '../exam/examQuestionBank.ts';
+import { examIngestionService } from '../exam/examIngestionService.ts';
+import { HSK_SOURCE_REGISTRY } from '../exam/examSourceRegistry.ts';
+import type {
   HskExamVersion,
   ExamSectionId,
   ExamQuestionType,
@@ -31,7 +31,7 @@ import {
   ExamAttemptRecord,
   ActiveExamSession,
   ExamPaperMetadata,
-} from '../exam/examTypes';
+} from '../exam/examTypes.ts';
 
 export type {
   HskExamVersion,

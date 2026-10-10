@@ -22,7 +22,7 @@ export const YuyanAIFloatingButton: React.FC = () => {
   };
 
   return createPortal(
-    <div className="fixed bottom-20 md:bottom-7 right-5 z-40 flex items-center gap-2 group animate-in fade-in slide-in-from-bottom-4 duration-300 isolate">
+    <div className="fixed bottom-20 md:bottom-7 right-5 z-launcher flex items-center gap-2 group animate-in fade-in slide-in-from-bottom-4 duration-300 isolate">
       {/* Tooltip Badge "Hỏi Yuyan AI" */}
       <div
         onClick={handleClick}

@@ -48,6 +48,17 @@ export default {
         "status-warning": "#F4B95E",
         "status-error": "#E86A6A"
       },
+      zIndex: {
+        'content': '10',
+        'navbar': '20',
+        'sidebar': '25',
+        'nav-bottom': '30',
+        'launcher': '40',
+        'backdrop': '45',
+        'chat': '50',
+        'modal': '60',
+        'tooltip': '70',
+      },
       fontFamily: {
         sans: ["'Be Vietnam Pro'", "sans-serif"],
         body: ["'Be Vietnam Pro'", "sans-serif"],

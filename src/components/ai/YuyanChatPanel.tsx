@@ -4,6 +4,8 @@ import {
   X,
   Minus,
   Maximize2,
+  Minimize2,
+  ExternalLink,
   MoreHorizontal,
   Send,
   Mic,
@@ -38,6 +40,17 @@ export const YuyanChatPanel: React.FC<{
     voiceSettings,
   } = useYuyanAI();
 
+  const [isExpanded, setIsExpanded] = useState(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('mode') === 'expanded') return true;
+      }
+    } catch {
+      // ignore
+    }
+    return false;
+  });
   const [inputVal, setInputVal] = useState('');
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [speakingId, setSpeakingId] = useState<number | null>(null);
@@ -102,61 +115,77 @@ export const YuyanChatPanel: React.FC<{
 
   return createPortal(
     <>
-      {/* Mobile-only safe backdrop (< md) */}
+      {/* Mobile-only safe backdrop (< md) at z-backdrop (45) */}
       <div
-        className="fixed inset-0 z-[55] bg-black/40 backdrop-blur-xs md:hidden animate-in fade-in duration-200"
+        className="fixed inset-0 z-backdrop bg-black/50 backdrop-blur-xs md:hidden animate-in fade-in duration-200"
         onClick={closeAssistant}
         aria-hidden="true"
       />
 
-      {/* Floating / Responsive AI Chat Panel */}
+      {/* Floating / Responsive AI Chat Panel at z-chat (50) */}
       <div
         role="dialog"
         aria-label="Cửa sổ trò chuyện Yuyan AI"
-        className="fixed z-[60] bottom-0 left-0 right-0 md:left-auto md:bottom-6 md:right-6 w-[calc(100vw-32px)] sm:w-[410px] max-w-full md:max-w-[calc(100vw-48px)] h-[85vh] md:h-[580px] max-h-[85vh] md:max-h-[calc(100vh-100px)] bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-t-3xl md:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col overflow-hidden isolate"
+        className={`fixed z-chat bottom-0 left-0 right-0 md:left-auto md:bottom-6 md:right-6 ${
+          isExpanded
+            ? 'w-[calc(100vw-32px)] sm:w-[560px] md:w-[680px] h-[90vh] md:h-[680px]'
+            : 'w-[calc(100vw-32px)] sm:w-[410px] h-[85vh] md:h-[580px]'
+        } max-w-full md:max-w-[calc(100vw-48px)] max-h-[90vh] md:max-h-[calc(100vh-80px)] bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-t-3xl md:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col overflow-hidden isolate transition-all duration-200`}
         style={{
-          backgroundColor: 'var(--surface, #ffffff)',
-          boxShadow: '0 20px 40px -15px rgba(0, 98, 161, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.08)',
         }}
       >
-        {/* 1. Header */}
-        <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-border-subtle bg-surface-secondary/80 select-none">
+        {/* 1. Header (100% Solid) */}
+        <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 select-none">
           <div className="flex items-center gap-2.5">
             <YuyanAIAvatar size="sm" showOnlineStatus={true} />
             <div>
               <div className="flex items-center gap-1.5">
-                <h3 className="text-sm font-bold text-text-primary leading-none">Yuyan AI</h3>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white leading-none">Yuyan AI</h3>
                 <span className="inline-block w-2 h-2 rounded-full bg-status-success animate-pulse" />
               </div>
               <span className="text-2xs text-status-success font-medium">Đang online</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-1 text-text-muted">
+          <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
             {/* Settings button */}
             <button
               onClick={openSettingsModal}
-              className="p-1.5 rounded-xl hover:text-text-primary hover:bg-surface transition-colors"
+              className="p-1.5 rounded-xl hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
               title="Cài đặt AI"
             >
               <MoreHorizontal className="w-4 h-4" />
             </button>
 
-            {/* Expand to workspace */}
+            {/* Toggle Expand / Normal mode */}
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="p-1.5 rounded-xl hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors hidden sm:block"
+              title={isExpanded ? 'Thu về dạng nhỏ' : 'Mở rộng khung trò chuyện'}
+            >
+              {isExpanded ? (
+                <Minimize2 className="w-3.5 h-3.5" />
+              ) : (
+                <Maximize2 className="w-3.5 h-3.5" />
+              )}
+            </button>
+
+            {/* Navigate to full AI workspace page */}
             {onNavigateToWorkspace && (
               <button
                 onClick={onNavigateToWorkspace}
-                className="p-1.5 rounded-xl hover:text-text-primary hover:bg-surface transition-colors"
-                title="Mở toàn màn hình"
+                className="p-1.5 rounded-xl hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors hidden sm:block"
+                title="Mở không gian AI toàn trang (/ai)"
               >
-                <Maximize2 className="w-3.5 h-3.5" />
+                <ExternalLink className="w-3.5 h-3.5" />
               </button>
             )}
 
             {/* Minimize */}
             <button
               onClick={minimizeAssistant}
-              className="p-1.5 rounded-xl hover:text-text-primary hover:bg-surface transition-colors"
+              className="p-1.5 rounded-xl hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
               title="Thu nhỏ"
             >
               <Minus className="w-4 h-4" />
@@ -165,7 +194,7 @@ export const YuyanChatPanel: React.FC<{
             {/* Close */}
             <button
               onClick={closeAssistant}
-              className="p-1.5 rounded-xl hover:text-text-primary hover:bg-surface transition-colors"
+              className="p-1.5 rounded-xl hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
               title="Đóng"
             >
               <X className="w-4 h-4" />
@@ -173,7 +202,7 @@ export const YuyanChatPanel: React.FC<{
           </div>
         </div>
 
-        {/* 2. Conversation Message List */}
+        {/* 2. Conversation Message List (100% Solid) */}
         <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 bg-white dark:bg-slate-900 custom-scrollbar text-xs">
           {messages.map((msg) => {
             const isUser = msg.sender === 'user';
@@ -188,7 +217,7 @@ export const YuyanChatPanel: React.FC<{
                   className={`max-w-[85%] rounded-2xl p-3.5 shadow-2xs space-y-2 ${
                     isUser
                       ? 'bg-primary text-white rounded-br-xs'
-                      : 'bg-surface dark:bg-slate-800/80 border border-border-subtle text-text-primary rounded-bl-xs'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-200/90 dark:border-slate-700 rounded-bl-xs'
                   }`}
                 >
                   {/* Message Body */}
@@ -198,12 +227,12 @@ export const YuyanChatPanel: React.FC<{
 
                   {/* Sub-actions for AI Message */}
                   {!isUser && (
-                    <div className="pt-2 border-t border-border-subtle/60 flex flex-wrap items-center justify-between gap-1 text-2xs text-text-muted">
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-1 text-2xs text-slate-500 dark:text-slate-400">
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => handleSpeak(msg.id, msg.text)}
-                          className={`p-1 rounded-md hover:bg-surface-secondary transition-colors ${
-                            speakingId === msg.id ? 'text-primary' : 'text-text-muted'
+                          className={`p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${
+                            speakingId === msg.id ? 'text-primary' : 'text-slate-500 dark:text-slate-400'
                           }`}
                           title="Nghe phát âm"
                         >
@@ -211,7 +240,7 @@ export const YuyanChatPanel: React.FC<{
                         </button>
                         <button
                           onClick={() => handleCopy(msg.id, msg.text)}
-                          className="p-1 rounded-md hover:bg-surface-secondary text-text-muted transition-colors"
+                          className="p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 transition-colors"
                           title="Sao chép nội dung"
                         >
                           {copiedId === msg.id ? (
@@ -226,13 +255,13 @@ export const YuyanChatPanel: React.FC<{
                       <div className="flex gap-1">
                         <button
                           onClick={() => sendMessage(`Giải thích sâu hơn về: "${msg.text.slice(0, 40)}"`)}
-                          className="px-2 py-0.5 rounded-full bg-surface-secondary hover:bg-primary-soft hover:text-primary transition-colors font-medium"
+                          className="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 hover:bg-primary-soft hover:text-primary transition-colors font-medium text-slate-700 dark:text-slate-200"
                         >
                           Giải thích sâu hơn
                         </button>
                         <button
                           onClick={() => sendMessage(`Thêm ví dụ thực tế cho: "${msg.text.slice(0, 40)}"`)}
-                          className="px-2 py-0.5 rounded-full bg-surface-secondary hover:bg-primary-soft hover:text-primary transition-colors font-medium"
+                          className="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 hover:bg-primary-soft hover:text-primary transition-colors font-medium text-slate-700 dark:text-slate-200"
                         >
                           Thêm ví dụ
                         </button>
@@ -245,19 +274,19 @@ export const YuyanChatPanel: React.FC<{
           })}
 
           {isLoading && (
-            <div className="flex gap-2.5 items-center text-xs text-text-muted pl-9">
+            <div className="flex gap-2.5 items-center text-xs text-slate-500 dark:text-slate-400 pl-9">
               <span className="w-2 h-2 rounded-full bg-primary animate-bounce" />
               <span className="w-2 h-2 rounded-full bg-primary animate-bounce [animation-delay:0.2s]" />
               <span className="w-2 h-2 rounded-full bg-primary animate-bounce [animation-delay:0.4s]" />
-              <span className="text-2xs font-medium ml-1">Yuyan AI đang trả lời...</span>
+              <span className="text-2xs font-medium ml-1">Yuyan AI đang soạn câu trả lời...</span>
             </div>
           )}
 
           <div ref={messagesEndRef} />
         </div>
 
-        {/* 3. Quick Actions Pill Bar */}
-        <div className="flex-shrink-0 px-3 py-1.5 border-t border-border-subtle/80 bg-surface-secondary/50 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+        {/* 3. Quick Actions Pill Bar (100% Solid) */}
+        <div className="flex-shrink-0 px-3 py-1.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {quickActions.map((qa, idx) => {
             const Icon = qa.icon;
             return (
@@ -266,7 +295,7 @@ export const YuyanChatPanel: React.FC<{
                 onClick={() => {
                   setInputVal(qa.prompt);
                 }}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface dark:bg-slate-800 border border-border-subtle/80 text-2xs font-semibold text-text-secondary hover:text-primary hover:border-primary/40 shrink-0 transition-all active:scale-95 shadow-2xs"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-2xs font-semibold text-slate-700 dark:text-slate-200 hover:text-primary hover:border-primary/40 shrink-0 transition-all active:scale-95 shadow-2xs"
               >
                 <Icon className="w-3 h-3 text-primary" />
                 <span>{qa.label}</span>
@@ -275,14 +304,14 @@ export const YuyanChatPanel: React.FC<{
           })}
         </div>
 
-        {/* 4. Message Composer */}
-        <div className="flex-shrink-0 p-3 border-t border-border-subtle bg-surface dark:bg-slate-900 flex items-end gap-2">
+        {/* 4. Message Composer (100% Solid) */}
+        <div className="flex-shrink-0 p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] md:pb-3 flex items-end gap-2">
           {/* Attachment button */}
           <button
             onClick={() => {
               setInputVal((v) => (v ? v + ' [Đính kèm tài liệu] ' : 'Phân tích tài liệu này giúp tôi: '));
             }}
-            className="p-2 rounded-xl text-text-muted hover:text-text-primary hover:bg-surface-secondary transition-colors shrink-0"
+            className="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
             title="Đính kèm tài liệu hoặc ảnh bài tập"
           >
             <Paperclip className="w-4 h-4" />
@@ -295,7 +324,7 @@ export const YuyanChatPanel: React.FC<{
             onChange={(e) => setInputVal(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Nhập câu hỏi của em..."
-            className="flex-1 max-h-24 p-2 bg-surface-secondary/60 dark:bg-slate-800/60 rounded-xl border border-border-subtle text-xs text-text-primary placeholder:text-text-muted focus:outline-hidden focus:border-primary resize-none custom-scrollbar"
+            className="flex-1 max-h-24 p-2 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-xl border border-slate-200 dark:border-slate-700 text-xs placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-hidden focus:border-primary resize-none custom-scrollbar"
           />
 
           {/* Microphone Voice Mode button */}

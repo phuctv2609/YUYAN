@@ -49,9 +49,29 @@ const STORAGE_CHAT_KEY = 'yuyan_ai_chat_history_v1';
 const STORAGE_SETTINGS_KEY = 'yuyan_voice_settings_v1';
 
 export const YuyanAIProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [isAssistantOpen, setIsAssistantOpen] = useState(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('ai') === 'open') return true;
+      }
+    } catch {
+      // ignore
+    }
+    return false;
+  });
   const [isMinimized, setIsMinimized] = useState(false);
-  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('voice') === 'open') return true;
+      }
+    } catch {
+      // ignore
+    }
+    return false;
+  });
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);

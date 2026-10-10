@@ -35,6 +35,7 @@ supabase/.temp/
 
 # Scratch & Temporary Testing
 scratch/
+scripts/verification_screenshots/
 
 # Auto-sync Runtime Files
 tools/autosync/*.log

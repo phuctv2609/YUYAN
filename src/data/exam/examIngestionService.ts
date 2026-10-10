@@ -4,10 +4,10 @@
  * eliminates duplicate records, and generates comprehensive synchronization reports.
  */
 
-import { ExamQuestion, IngestionValidationReport } from './examTypes';
-import { MASTER_EXAM_QUESTION_BANK } from './examQuestionBank';
-import { EXAM_PAPER_CATALOG } from './examPaperCatalog';
-import { HSK_SOURCE_REGISTRY } from './examSourceRegistry';
+import type { ExamQuestion, IngestionValidationReport } from './examTypes.ts';
+import { MASTER_EXAM_QUESTION_BANK } from './examQuestionBank.ts';
+import { EXAM_PAPER_CATALOG } from './examPaperCatalog.ts';
+import { HSK_SOURCE_REGISTRY } from './examSourceRegistry.ts';
 
 export class ExamIngestionService {
   private static instance: ExamIngestionService;

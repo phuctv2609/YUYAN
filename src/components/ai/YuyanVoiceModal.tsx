@@ -76,7 +76,7 @@ export const YuyanVoiceModal: React.FC = () => {
   const isGenerating = state === 'generating_response';
 
   return createPortal(
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200 isolate">
+    <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200 isolate">
       <div className="relative w-full max-w-md bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200" style={{ backgroundColor: 'var(--surface, #ffffff)' }}>
         {/* Top Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle/80 bg-surface-secondary/40">

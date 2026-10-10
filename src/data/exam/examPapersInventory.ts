@@ -4,7 +4,7 @@
  * Tracks official syllabus sources, revisions, licensing, and verification status.
  */
 
-import { ExamPaperMetadata } from './examTypes';
+import type { ExamPaperMetadata } from './examTypes.ts';
 export type { ExamPaperMetadata };
 
 export interface ExamCoverageSummary {
