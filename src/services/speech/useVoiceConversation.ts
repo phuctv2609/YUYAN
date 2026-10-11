@@ -1,7 +1,7 @@
 /**
  * YUYAN — React Hook for Real-Time AI Voice Conversation
- * Mobile-compatible, robust voice conversation state machine:
- * idle → requesting_permission → recording → transcribing → generating_response → speaking → ready
+ * Explicit state machine:
+ * idle → requesting_permission → recording → transcribing → submitting_to_ai → generating_response → speaking → completed → ready
  * Coordinates Dual-Engine Speech Recognition (Native / Gemini Cloud STT),
  * Gemini AI Chat API, and Mobile-Unlocked Speech Synthesis (TTS).
  */
@@ -16,7 +16,7 @@ import {
   MobileVoiceCapabilities,
   STTEngineMode,
 } from './speechTypes';
-import { speechRecognitionService } from './speechRecognitionService';
+import { speechRecognitionService, logVoiceStage } from './speechRecognitionService';
 import { speechSynthesisService } from './speechSynthesisService';
 import { aiApiService } from '../ai/aiApiService';
 
@@ -87,7 +87,9 @@ export function useVoiceConversation(options?: {
 
   // Refresh capabilities on mount
   useEffect(() => {
-    setCapabilities(speechRecognitionService.getCapabilities());
+    const caps = speechRecognitionService.getCapabilities();
+    setCapabilities(caps);
+    setActiveEngine(speechRecognitionService.getActiveEngine());
   }, []);
 
   // Mobile Page Lifecycle: suspend on background/app switch to prevent stuck audio tracks
@@ -125,6 +127,8 @@ export function useVoiceConversation(options?: {
    * Must be called from user touch/click to unlock mobile audio
    */
   const startRecording = useCallback(async () => {
+    logVoiceStage(1, 'User tapped Microphone action button');
+
     // 1. Mobile user gesture audio unlock
     speechSynthesisService.unlockAudioOnUserGesture();
 
@@ -172,7 +176,7 @@ export function useVoiceConversation(options?: {
             durationTimerRef.current = null;
           }
           if (err.code === 'NO_SPEECH') {
-            // Gentle reset rather than scary failure
+            // Friendly prompt to speak again
             setError(err);
             setState('ready');
           } else {
@@ -190,7 +194,8 @@ export function useVoiceConversation(options?: {
           // If transcript captured, automatically proceed to AI generation
           if (activeTranscriptRef.current.trim().length > 0) {
             void processUserQuery(activeTranscriptRef.current.trim());
-          } else if (stateRef.current === 'recording') {
+          } else {
+            // Prevent deadlock: reset to ready state so user can retry immediately
             setState('ready');
           }
         },
@@ -212,6 +217,7 @@ export function useVoiceConversation(options?: {
    * Stop Recording explicitly and submit recognized speech
    */
   const stopRecordingAndSend = useCallback(async () => {
+    logVoiceStage(6, 'User tapped Stop action button to finalize turn');
     if (durationTimerRef.current) {
       window.clearInterval(durationTimerRef.current);
       durationTimerRef.current = null;
@@ -224,6 +230,7 @@ export function useVoiceConversation(options?: {
    * Cancel recording without submitting
    */
   const cancelRecording = useCallback(() => {
+    logVoiceStage(6, 'Recording cancelled by user');
     if (durationTimerRef.current) {
       window.clearInterval(durationTimerRef.current);
       durationTimerRef.current = null;
@@ -247,8 +254,12 @@ export function useVoiceConversation(options?: {
         return;
       }
 
-      setState('generating_response');
+      setState('submitting_to_ai');
+      logVoiceStage(11, `Displaying user transcript in conversation feed: "${text}"`);
       options?.onNewMessage?.({ sender: 'user', text });
+
+      setState('generating_response');
+      logVoiceStage(12, `Submitting user speech query to AI chat service: "${text}"`);
 
       try {
         let aiReplyText = '';
@@ -257,7 +268,7 @@ export function useVoiceConversation(options?: {
         let feedback: string | null = null;
         let followUp: string | undefined = undefined;
 
-        // Use natural chat endpoint by default
+        // Use natural conversation endpoint
         const chatRes = await aiApiService.sendChatMessage({
           scenario: options?.scenario || 'Hội thoại tự do hàng ngày',
           message: text,
@@ -271,11 +282,13 @@ export function useVoiceConversation(options?: {
         feedback = chatRes.feedback || null;
         followUp = chatRes.followUp;
 
+        logVoiceStage(13, `AI response generated: "${aiReplyText}"`);
         setLastAiResponse(aiReplyText);
         setLastAiPinyin(aiPinyin);
         setLastAiVietnamese(aiVietnamese);
 
-        // Notify parent with full metadata
+        // Notify parent context with full metadata
+        logVoiceStage(14, 'Rendering AI response in conversation UI card');
         options?.onNewMessage?.({
           sender: 'ai',
           text: aiReplyText,
@@ -287,6 +300,7 @@ export function useVoiceConversation(options?: {
 
         // Speak AI Response
         if (settingsRef.current.ttsEnabled && aiReplyText) {
+          logVoiceStage(15, `Starting bilingual speech synthesis for: "${aiReplyText}"`);
           setState('speaking');
           await speechSynthesisService.speakBilingual({
             text: aiReplyText,
@@ -298,68 +312,91 @@ export function useVoiceConversation(options?: {
               setState('speaking');
             },
             onEnd: () => {
-              setState('ready');
-              // If continuous mode enabled, listen again after AI completes
-              if (settingsRef.current.continuousMode) {
-                setTimeout(() => {
-                  if (stateRef.current === 'ready') {
-                    void startRecording();
-                  }
-                }, 800);
-              }
+              logVoiceStage(15, 'Bilingual speech synthesis playback completed');
+              setState('completed');
+              setTimeout(() => {
+                setState((curr) => (curr === 'completed' ? 'ready' : curr));
+              }, 300);
             },
-            onError: () => {
+            onError: (ttsErr) => {
+              console.warn('TTS playback error, recovering:', ttsErr);
               setState('ready');
             },
           });
         } else {
-          setState('ready');
+          setState('completed');
+          setTimeout(() => {
+            setState((curr) => (curr === 'completed' ? 'ready' : curr));
+          }, 200);
         }
-      } catch (aiErr: any) {
-        console.error('AI voice query failed:', aiErr);
+      } catch (chatErr: any) {
+        console.error('AI chat error during voice turn:', chatErr);
         setError({
           code: 'AI_ERROR',
-          message: aiErr?.message || 'Lỗi kết nối tới Gia sư AI Gemini.',
+          message: chatErr?.message || 'Không thể nhận phản hồi từ AI. Vui lòng thử lại.',
         });
         setState('error');
       }
     },
-    [options, startRecording]
+    [options]
   );
 
   /**
-   * Stop active TTS playback
+   * Switch STT recognition engine (native / cloud)
+   */
+  const switchEngineMode = useCallback(
+    (mode: STTEngineMode) => {
+      updateSettings({ sttEngineMode: mode });
+      if (mode === 'native' && capabilities.hasNativeSTT) {
+        setActiveEngine('native');
+      } else {
+        setActiveEngine('cloud');
+      }
+    },
+    [capabilities.hasNativeSTT, updateSettings]
+  );
+
+  /**
+   * Stop speech synthesis manually
    */
   const stopSpeaking = useCallback(() => {
     speechSynthesisService.stop();
-    setState('ready');
+    if (stateRef.current === 'speaking') {
+      setState('ready');
+    }
   }, []);
 
   /**
-   * Replay last spoken AI response with optional custom reading mode
+   * Replay last AI response with custom reading mode
    */
   const replayLastResponse = useCallback(
-    async (customMode?: import('./speechTypes').ReadingMode) => {
+    async (mode?: 'all' | 'chinese_only' | 'vietnamese_only') => {
       if (!lastAiResponse) return;
-      speechSynthesisService.unlockAudioOnUserGesture();
+      speechSynthesisService.stop();
       setState('speaking');
-      await speechSynthesisService.speakBilingual({
-        text: lastAiResponse,
-        rate: settings.speechRate,
-        chineseVoiceUri: settings.chineseVoiceUri,
-        vietnameseVoiceUri: settings.vietnameseVoiceUri,
-        readingMode: customMode || settings.readingMode,
-        onStart: () => setState('speaking'),
-        onEnd: () => setState('ready'),
-        onError: () => setState('ready'),
-      });
+      try {
+        await speechSynthesisService.speakBilingual({
+          text: lastAiResponse,
+          rate: settingsRef.current.speechRate,
+          chineseVoiceUri: settingsRef.current.chineseVoiceUri,
+          vietnameseVoiceUri: settingsRef.current.vietnameseVoiceUri,
+          readingMode: mode || settingsRef.current.readingMode,
+          onStart: () => {
+            setState('speaking');
+          },
+          onEnd: () => {
+            setState('ready');
+          },
+          onError: () => {
+            setState('ready');
+          },
+        });
+      } catch {
+        setState('ready');
+      }
     },
-    [lastAiResponse, settings.speechRate, settings.chineseVoiceUri, settings.vietnameseVoiceUri, settings.readingMode]
+    [lastAiResponse]
   );
-
-  const switchEngineMode = useCallback((mode: STTEngineMode) => {
-    updateSettings({ sttEngineMode: mode });
-  }, [updateSettings]);
 
   return {
     state,
@@ -374,12 +411,11 @@ export function useVoiceConversation(options?: {
     settings,
     capabilities,
     activeEngine,
-    switchEngineMode,
     updateSettings,
+    switchEngineMode,
     startRecording,
     stopRecordingAndSend,
     cancelRecording,
-    processUserQuery,
     stopSpeaking,
     replayLastResponse,
   };

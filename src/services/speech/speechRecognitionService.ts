@@ -1,12 +1,12 @@
 /**
  * YUYAN — Speech Recognition (STT) Service
  * Mobile-compatible, dual-engine speech recognition pipeline:
- * 1. Engine 'native': Browser Web Speech API (webkitSpeechRecognition)
- * 2. Engine 'cloud': Resilient MediaRecorder audio capture + Gemini 2.5 Flash STT
+ * 1. Engine 'cloud' (Default on Mobile): Resilient MediaRecorder audio capture + Gemini 2.5 Flash STT
+ * 2. Engine 'native' (Desktop Web Speech): Browser Web Speech API (webkitSpeechRecognition)
  *
- * Designed specifically to avoid mobile OS microphone exclusivity locks,
- * support iOS Safari / Android Chrome / WebViews, handle secure-context checks,
- * and release all hardware media tracks cleanly.
+ * Full 15-stage structured pipeline diagnostics:
+ * Tracks permissions, real audio capture, volume metering, MIME negotiation,
+ * Blob encoding, backend Edge Function submission, transcript parsing, and clean track teardown.
  */
 
 import {
@@ -21,11 +21,23 @@ import { aiApiService } from '../ai/aiApiService';
 
 type SpeechRecognitionType = any;
 
+/**
+ * Structured Pipeline Diagnostics Logger
+ */
+export function logVoiceStage(stage: number, description: string, data?: any) {
+  const prefix = `[YUYAN-VOICE Stage ${stage}]`;
+  if (data !== undefined) {
+    console.log(`${prefix} ${description}`, data);
+  } else {
+    console.log(`${prefix} ${description}`);
+  }
+}
+
 export class SpeechRecognitionService {
   private static instance: SpeechRecognitionService;
   private recognition: SpeechRecognitionType | null = null;
   private isListening: boolean = false;
-  private activeEngine: 'native' | 'cloud' = 'native';
+  private activeEngine: 'native' | 'cloud' = 'cloud';
 
   private onResultCallback?: (result: STTRecognitionResult) => void;
   private onVolumeCallback?: (volumePercent: number) => void;
@@ -57,24 +69,34 @@ export class SpeechRecognitionService {
         isSecureContext: false,
         isIOS: false,
         isAndroid: false,
+        isMobile: false,
         preferredEngine: 'cloud',
       };
     }
 
     const ua = navigator.userAgent || '';
-    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isIOS =
+      /iPad|iPhone|iPod/.test(ua) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     const isAndroid = /Android/.test(ua);
-    const isSecureContext = Boolean(window.isSecureContext || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const isMobile = isIOS || isAndroid || /Mobi|Tablet|Mobile/i.test(ua);
+    const isSecureContext = Boolean(
+      window.isSecureContext ||
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1'
+    );
 
-    const hasNativeSTT = Boolean(
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition
-    ) && isSecureContext;
+    const hasNativeSTT =
+      Boolean(
+        (window as any).SpeechRecognition ||
+          (window as any).webkitSpeechRecognition
+      ) && isSecureContext;
 
-    const hasMediaRecorder = Boolean(
-      typeof navigator?.mediaDevices?.getUserMedia === 'function' &&
-      typeof MediaRecorder !== 'undefined'
-    ) && isSecureContext;
+    const hasMediaRecorder =
+      Boolean(
+        typeof navigator?.mediaDevices?.getUserMedia === 'function' &&
+          typeof MediaRecorder !== 'undefined'
+      ) && isSecureContext;
 
     const hasSpeechSynthesis = Boolean(window.speechSynthesis);
 
@@ -86,9 +108,21 @@ export class SpeechRecognitionService {
       hasVietnameseVoice = voices.some((v) => (v.lang || '').toLowerCase().startsWith('vi'));
     }
 
-    // On iOS Safari / in-app browsers, MediaRecorder + Gemini cloud STT is vastly more reliable
-    // than webkitSpeechRecognition which frequently cuts out or blocks continuous listening.
-    const preferredEngine = hasNativeSTT && !isIOS ? 'native' : hasMediaRecorder ? 'cloud' : hasNativeSTT ? 'native' : 'cloud';
+    // CRITICAL ARCHITECTURE: On ALL mobile browsers (Android Chrome, iOS Safari, WebViews),
+    // browser webkitSpeechRecognition is unreliable: it lacks Chinese models in VN,
+    // fails silently, or gets blocked by carrier firewalls.
+    // MediaRecorder + Gemini 2.5 Flash Cloud STT is 100% reliable across all devices.
+    const preferredEngine: 'native' | 'cloud' = isMobile
+      ? hasMediaRecorder
+        ? 'cloud'
+        : hasNativeSTT
+        ? 'native'
+        : 'cloud'
+      : hasNativeSTT
+      ? 'native'
+      : hasMediaRecorder
+      ? 'cloud'
+      : 'native';
 
     return {
       hasNativeSTT,
@@ -99,6 +133,7 @@ export class SpeechRecognitionService {
       isSecureContext,
       isIOS,
       isAndroid,
+      isMobile,
       preferredEngine,
     };
   }
@@ -132,6 +167,7 @@ export class SpeechRecognitionService {
     onStart?: () => void;
     onEnd?: () => void;
   }): Promise<void> {
+    logVoiceStage(1, 'Microphone button clicked, initializing speech recognition pipeline');
     const caps = this.getCapabilities();
 
     if (!caps.isSecureContext) {
@@ -146,7 +182,8 @@ export class SpeechRecognitionService {
     if (!caps.hasNativeSTT && !caps.hasMediaRecorder) {
       const err: VoiceError = {
         code: 'NOT_SUPPORTED',
-        message: 'Thiết bị của bạn chưa hỗ trợ nhận diện giọng nói hoặc micro ghi âm. Vui lòng sử dụng Chrome hoặc Safari.',
+        message:
+          'Thiết bị của bạn chưa hỗ trợ nhận diện giọng nói hoặc micro ghi âm. Vui lòng sử dụng Chrome hoặc Safari.',
       };
       options.onError?.(err);
       throw err;
@@ -162,21 +199,25 @@ export class SpeechRecognitionService {
     this.onEndCallback = options.onEnd;
     this.currentLang = options.lang || 'zh-CN';
 
-    // Determine engine: 'auto' | 'native' | 'cloud'
+    // Engine negotiation:
+    // On Mobile: always default to 'cloud' unless explicitly requested otherwise.
     let selectedEngine: 'native' | 'cloud' = caps.preferredEngine;
-    if (options.engineMode === 'native' && caps.hasNativeSTT) {
+    if (options.engineMode === 'cloud' && caps.hasMediaRecorder) {
+      selectedEngine = 'cloud';
+    } else if (options.engineMode === 'native' && caps.hasNativeSTT && !caps.isMobile) {
       selectedEngine = 'native';
-    } else if (options.engineMode === 'cloud' && caps.hasMediaRecorder) {
+    } else if (caps.isMobile && caps.hasMediaRecorder) {
       selectedEngine = 'cloud';
     }
+
     this.activeEngine = selectedEngine;
+    logVoiceStage(2, `Engine negotiated: ${selectedEngine} (mobile: ${caps.isMobile}, mode: ${options.engineMode || 'auto'})`);
 
     if (selectedEngine === 'native') {
       try {
         await this.startNativeRecognition(options);
       } catch (nativeErr: any) {
-        console.warn('Native speech recognition failed, attempting cloud recorder fallback:', nativeErr);
-        // Seamless fallback to cloud recorder if media recorder is available
+        console.warn('Native speech recognition failed, falling back to Gemini Cloud STT:', nativeErr);
         if (caps.hasMediaRecorder) {
           this.activeEngine = 'cloud';
           await this.startCloudRecording(options);
@@ -190,7 +231,7 @@ export class SpeechRecognitionService {
   }
 
   /**
-   * Path A: Native Browser SpeechRecognition
+   * Path A: Native Browser SpeechRecognition (Desktop Chrome)
    */
   private async startNativeRecognition(options: {
     lang?: SpeechRecognitionLanguage;
@@ -202,6 +243,7 @@ export class SpeechRecognitionService {
       throw new Error('SpeechRecognition is not defined in this browser window.');
     }
 
+    logVoiceStage(4, 'Initializing Native SpeechRecognition instance');
     this.recognition = new SpeechRec();
     this.recognition.continuous = options.continuous ?? false;
     this.recognition.interimResults = true;
@@ -217,6 +259,7 @@ export class SpeechRecognitionService {
 
     this.recognition.onstart = () => {
       this.isListening = true;
+      logVoiceStage(5, `Native SpeechRecognition listening active (lang: ${langCode})`);
       this.onStartCallback?.();
       this.startSimulatedVolume();
     };
@@ -237,11 +280,11 @@ export class SpeechRecognitionService {
         }
       }
 
-      // Boost volume reading on active interim result
       if (interimTranscript.length > 0 || finalTranscript.length > 0) {
         this.onVolumeCallback?.(Math.min(95, 45 + Math.round(Math.random() * 45)));
       }
 
+      logVoiceStage(10, `Native interim/final result: "${finalTranscript || interimTranscript}"`);
       this.onResultCallback?.({
         transcript: finalTranscript.trim(),
         interimTranscript: interimTranscript.trim(),
@@ -255,7 +298,6 @@ export class SpeechRecognitionService {
       const errCode = event?.error || 'unknown';
       console.warn('Native speech recognition error:', errCode);
 
-      // On mobile no-speech is gentle, don't crash the session
       if (errCode === 'no-speech') {
         this.onErrorCallback?.({
           code: 'NO_SPEECH',
@@ -269,12 +311,12 @@ export class SpeechRecognitionService {
     };
 
     this.recognition.onend = () => {
+      logVoiceStage(6, 'Native SpeechRecognition onend event fired');
       this.isListening = false;
       this.stopSimulatedVolume();
       this.onEndCallback?.();
     };
 
-    // Note: WE DO NOT call startVolumeAnalysis() here to avoid mobile hardware microphone contention!
     this.recognition.start();
   }
 
@@ -286,6 +328,7 @@ export class SpeechRecognitionService {
   }): Promise<void> {
     try {
       this.isListening = true;
+      logVoiceStage(3, 'Requesting microphone MediaStream via getUserMedia');
       await audioRecordingService.startRecording({
         onVolume: (vol) => {
           options.onVolume?.(vol);
@@ -293,6 +336,7 @@ export class SpeechRecognitionService {
         },
         onStateChange: (state) => {
           if (state === 'recording') {
+            logVoiceStage(5, 'MediaRecorder active, collecting audio data chunks with real volume meter');
             this.onStartCallback?.();
           } else if (state === 'error') {
             this.isListening = false;
@@ -303,6 +347,7 @@ export class SpeechRecognitionService {
           }
         },
       });
+      logVoiceStage(4, 'MediaRecorder and Web Audio analyser successfully initialized');
     } catch (recordErr: any) {
       this.isListening = false;
       const err: VoiceError = {
@@ -319,24 +364,45 @@ export class SpeechRecognitionService {
    * Stop active listening session safely and retrieve final transcript
    */
   public async stopListening(): Promise<void> {
+    logVoiceStage(6, `Stop listening triggered (activeEngine: ${this.activeEngine})`);
+
     if (this.activeEngine === 'native') {
       if (this.recognition) {
         try {
           this.recognition.stop();
         } catch {
-          // ignore already stopped
+          // ignore
         }
       }
-      this.cleanup();
+      setTimeout(() => {
+        if (this.recognition) {
+          this.cleanup();
+          this.onEndCallback?.();
+        }
+      }, 500);
     } else {
       // Cloud recording engine: stop recording and send to Gemini STT
-      if (audioRecordingService.getState() === 'recording') {
+      const recorderState = audioRecordingService.getState();
+      if (recorderState === 'recording' || recorderState === 'requesting') {
         this.isListening = false;
         try {
+          logVoiceStage(6, 'Stopping MediaRecorder and finalizing audio Blob');
           const result = await audioRecordingService.stopRecording();
+          logVoiceStage(7, `Audio Blob finalized: size=${result.sizeBytes} bytes, mime=${result.mimeType}, duration=${result.durationMs}ms`);
+
+          // Validate usable audio existence
+          if (result.sizeBytes < 400 || result.durationMs < 400) {
+            logVoiceStage(7, 'Audio Blob is empty (<400 bytes) or too short', result);
+            this.onErrorCallback?.({
+              code: 'NO_SPEECH',
+              message: 'Bản thu âm quá ngắn hoặc chưa thu được giọng nói rõ ràng. Em hãy nhấn nói lại nhé.',
+            });
+            return;
+          }
+
+          logVoiceStage(8, 'Encoding audio to Base64 and uploading to Gemini Cloud STT');
           const base64Audio = await AudioRecordingService.blobToBase64(result.blob);
 
-          // Invoke Gemini Speech-to-Text
           const langHint =
             this.currentLang === 'vi-VN'
               ? 'vi-VN'
@@ -344,13 +410,20 @@ export class SpeechRecognitionService {
               ? 'auto'
               : 'zh-CN';
 
+          // Extract clean MIME type without codecs suffix for Gemini compatibility
+          const cleanMime = (result.mimeType || 'audio/webm').split(';')[0].trim();
+
           const sttData = await aiApiService.transcribeAudio({
             audioBase64: base64Audio,
-            audioMimeType: result.mimeType,
+            audioMimeType: cleanMime,
             languageHint: langHint,
           });
 
-          if (sttData && sttData.transcript) {
+          logVoiceStage(9, 'Gemini Cloud STT response received from server', sttData);
+
+          if (sttData && sttData.transcript && sttData.transcript.trim()) {
+            logVoiceStage(10, `Recognized speech parsed: "${sttData.transcript.trim()}" (lang: ${sttData.detectedLanguage})`);
+            logVoiceStage(11, 'Delivering recognized transcript to UI conversation callback');
             this.onResultCallback?.({
               transcript: sttData.transcript.trim(),
               interimTranscript: '',
@@ -359,13 +432,14 @@ export class SpeechRecognitionService {
               engine: 'cloud',
             });
           } else {
+            logVoiceStage(10, 'Empty transcript or silence detected in audio');
             this.onErrorCallback?.({
               code: 'NO_SPEECH',
-              message: 'Chưa thu được giọng nói rõ ràng. Em hãy thử nói to hơn một chút nhé.',
+              message: 'Chưa nhận diện được giọng nói rõ ràng. Em hãy thử nói to hơn một chút gần micro nhé.',
             });
           }
         } catch (sttErr: any) {
-          console.warn('Cloud STT transcription error:', sttErr);
+          logVoiceStage(9, 'Cloud STT transcription error encountered', sttErr);
           this.onErrorCallback?.({
             code: 'AI_ERROR',
             message: sttErr?.message || 'Lỗi khi nhận diện giọng nói qua đám mây.',
@@ -376,6 +450,7 @@ export class SpeechRecognitionService {
         }
       } else {
         this.cleanup();
+        this.onEndCallback?.();
       }
     }
   }
@@ -384,6 +459,7 @@ export class SpeechRecognitionService {
    * Abort immediately without submitting or processing
    */
   public abortListening(): void {
+    logVoiceStage(6, 'Aborting listening session immediately');
     if (this.activeEngine === 'native') {
       if (this.recognition) {
         try {

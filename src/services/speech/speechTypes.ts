@@ -12,9 +12,10 @@ export type VoiceConversationState =
   | 'ready'
   | 'recording'
   | 'transcribing'
-  | 'awaiting_confirmation'
+  | 'submitting_to_ai'
   | 'generating_response'
   | 'speaking'
+  | 'completed'
   | 'paused'
   | 'error';
 
@@ -54,6 +55,7 @@ export interface MobileVoiceCapabilities {
   isSecureContext: boolean;
   isIOS: boolean;
   isAndroid: boolean;
+  isMobile: boolean;
   preferredEngine: 'native' | 'cloud';
 }
 

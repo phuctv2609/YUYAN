@@ -535,10 +535,11 @@ class AiApiService {
     confidence?: number;
     isEmpty?: boolean;
   }> {
+    const cleanMime = (params.audioMimeType || 'audio/webm').split(';')[0].trim();
     const data = await this.invokeEdgeFunction({
       action: 'speech-to-text',
       audioBase64: params.audioBase64,
-      audioMimeType: params.audioMimeType || 'audio/webm',
+      audioMimeType: cleanMime,
       languageHint: params.languageHint || 'auto',
     });
 

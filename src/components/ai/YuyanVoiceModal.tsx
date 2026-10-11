@@ -105,7 +105,7 @@ export const YuyanVoiceModal: React.FC = () => {
 
   const isRecording = state === 'recording';
   const isSpeaking = state === 'speaking';
-  const isGenerating = state === 'generating_response';
+  const isGenerating = state === 'generating_response' || state === 'submitting_to_ai';
   const isTranscribing = state === 'transcribing';
   const isRequesting = state === 'requesting_permission';
 
