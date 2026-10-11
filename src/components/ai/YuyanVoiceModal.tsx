@@ -15,6 +15,7 @@ import {
   Cpu,
   Loader2,
   ChevronLeft,
+  Square,
 } from 'lucide-react';
 import { useYuyanAI } from '../../context/YuyanAIContext';
 import { useVoiceConversation } from '../../services/speech/useVoiceConversation';
@@ -256,15 +257,6 @@ export const YuyanVoiceModal: React.FC = () => {
               <span className="shrink-0">▾</span>
             </button>
             <div className="flex items-center gap-2 shrink-0">
-              {!capabilities.hasChineseVoice && (
-                <button
-                  onClick={openSettingsModal}
-                  className="text-3xs text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-0.5 cursor-pointer"
-                  title="Chưa tìm thấy giọng đọc tiếng Trung trên thiết bị. Bấm để mở cài đặt âm thanh."
-                >
-                  <span>Chưa có giọng Trung</span>
-                </button>
-              )}
               <span className="text-3xs uppercase tracking-wider font-semibold text-primary">
                 {settings.readingMode === 'chinese_only'
                   ? 'Chỉ tiếng Trung'
@@ -392,12 +384,12 @@ export const YuyanVoiceModal: React.FC = () => {
             <div className="py-8 text-center space-y-1.5 text-text-muted animate-in fade-in duration-150">
               <p className="text-sm font-semibold text-text-primary">Yuyan AI đang chăm chú lắng nghe...</p>
               <p className="text-xs text-text-muted">Em hãy nói bằng tiếng Trung hoặc tiếng Việt tự nhiên nhé.</p>
-              <p className="text-2xs text-primary font-medium">Tự động nhận diện khi bạn dừng nói.</p>
+              <p className="text-2xs text-rose-500 dark:text-rose-400 font-semibold">Nhấn nút Dừng màu đỏ ở giữa khi nói xong để gửi câu hỏi.</p>
             </div>
           ) : isTranscribing ? (
             <div className="py-8 text-center space-y-2 text-primary animate-in fade-in duration-150">
               <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
-              <p className="text-xs font-bold">Đang chuyển đổi giọng nói thành văn bản...</p>
+              <p className="text-xs font-bold">Đang hoàn tất và chuyển đổi giọng nói thành văn bản...</p>
             </div>
           ) : isGenerating ? (
             <div className="py-8 text-center space-y-2 text-primary animate-in fade-in duration-150">
@@ -411,7 +403,7 @@ export const YuyanVoiceModal: React.FC = () => {
               </div>
               <p className="text-sm font-bold text-text-primary">Luyện nói tiếng Trung tự nhiên</p>
               <p className="text-xs max-w-xs mx-auto text-text-muted">
-                Nói tiếng Trung hoặc tiếng Việt tự nhiên. AI sẽ tự động lắng nghe và đàm thoại liên tục cùng bạn.
+                Nhấn vào nút Micro để bắt đầu nói, sau đó nhấn nút Dừng để gửi câu hỏi đến Yuyan AI.
               </p>
             </div>
           )}
@@ -430,10 +422,10 @@ export const YuyanVoiceModal: React.FC = () => {
             Đóng
           </button>
 
-          {/* Central Action Microphone Button (Touch Target >= 64px) */}
+          {/* Central Action Microphone / Explicit Stop Button (Touch Target >= 64px) */}
           <div className="relative">
             {isListening && (
-              <span className="absolute -inset-2 rounded-full bg-primary/25 animate-ping pointer-events-none" />
+              <span className="absolute -inset-2 rounded-full bg-rose-500/25 animate-ping pointer-events-none" />
             )}
             <button
               onClick={() => {
@@ -447,20 +439,22 @@ export const YuyanVoiceModal: React.FC = () => {
               }}
               className={`relative w-16 h-16 rounded-full flex items-center justify-center text-white shadow-xl transition-all transform active:scale-95 cursor-pointer ${
                 isListening
-                  ? 'bg-primary ring-4 ring-primary/30 shadow-primary/30'
+                  ? 'bg-rose-500 hover:bg-rose-600 ring-4 ring-rose-500/30 shadow-rose-500/30'
                   : isSpeaking
                   ? 'bg-amber-500 hover:bg-amber-600 ring-4 ring-amber-500/30'
                   : isGenerating || isTranscribing
                   ? 'bg-slate-400 cursor-wait'
                   : 'bg-primary hover:bg-primary-hover ring-4 ring-primary/20'
               }`}
-              title={isListening ? 'Đang nghe (Nhấn để gửi ngay)' : isSpeaking ? 'Dừng phát âm' : 'Bắt đầu nói'}
-              aria-label={isListening ? 'Đang nghe tự động' : isSpeaking ? 'Dừng phát âm' : 'Bắt đầu thu âm'}
+              title={isListening ? 'Dừng và gửi (Nhấn khi nói xong)' : isSpeaking ? 'Dừng phát âm' : 'Bắt đầu nói'}
+              aria-label={isListening ? 'Dừng thu âm và gửi đến AI' : isSpeaking ? 'Dừng phát âm' : 'Bắt đầu thu âm'}
             >
               {isGenerating || isTranscribing ? (
                 <Loader2 className="w-6 h-6 animate-spin" />
               ) : isSpeaking ? (
-                <Volume2 className="w-6 h-6 animate-pulse" />
+                <Square className="w-5 h-5 fill-current" />
+              ) : isListening ? (
+                <Square className="w-5 h-5 fill-current" />
               ) : (
                 <Mic className="w-7 h-7" />
               )}

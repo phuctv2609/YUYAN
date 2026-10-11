@@ -81,6 +81,8 @@ export function useVoiceConversation(options?: {
   const resumeTimerRef = useRef<number | null>(null);
   const sessionActiveRef = useRef<boolean>(true);
   const activeTranscriptRef = useRef<string>('');
+  const isSubmittingRef = useRef<boolean>(false);
+  const explicitStopInitiatedRef = useRef<boolean>(false);
   const stateRef = useRef<VoiceConversationState>(state);
   stateRef.current = state;
 
@@ -134,6 +136,9 @@ export function useVoiceConversation(options?: {
   const startRecording = useCallback(async () => {
     logVoiceStage(1, 'User tapped Microphone action button');
     sessionActiveRef.current = true;
+    isSubmittingRef.current = false;
+    explicitStopInitiatedRef.current = false;
+
     if (resumeTimerRef.current) {
       window.clearTimeout(resumeTimerRef.current);
       resumeTimerRef.current = null;
@@ -156,7 +161,11 @@ export function useVoiceConversation(options?: {
       await speechRecognitionService.startListening({
         lang: settingsRef.current.sttLanguage,
         engineMode: settingsRef.current.sttEngineMode || 'auto',
-        continuous: false,
+        // EXPLICIT STOP ARCHITECTURE:
+        // Keep recording continuously across natural pauses, breaths, and sentences.
+        // Never auto-stop on silence; only finalize when user clicks the central Stop button.
+        continuous: true,
+        autoStopOnSilence: false,
         onStart: () => {
           setState('recording');
           setActiveEngine(speechRecognitionService.getActiveEngine());
@@ -201,11 +210,10 @@ export function useVoiceConversation(options?: {
           }
           setVolume(0);
 
-          // If transcript captured, automatically proceed to AI generation
-          if (activeTranscriptRef.current.trim().length > 0) {
-            void processUserQuery(activeTranscriptRef.current.trim());
-          } else {
-            // Prevent deadlock: reset to ready state so user can retry immediately
+          // CRITICAL: onEnd alone does NOT auto-submit to AI!
+          // AI submission is exclusively triggered when the user explicitly clicks Stop.
+          if (!explicitStopInitiatedRef.current && stateRef.current === 'recording') {
+            logVoiceStage(6, 'Recognition onend without explicit stop — keeping ready state');
             setState('ready');
           }
         },
@@ -224,37 +232,6 @@ export function useVoiceConversation(options?: {
   }, []);
 
   /**
-   * Stop Recording explicitly and submit recognized speech
-   */
-  const stopRecordingAndSend = useCallback(async () => {
-    logVoiceStage(6, 'User tapped Stop action button to finalize turn');
-    if (durationTimerRef.current) {
-      window.clearInterval(durationTimerRef.current);
-      durationTimerRef.current = null;
-    }
-    setState('transcribing');
-    await speechRecognitionService.stopListening();
-  }, []);
-
-  /**
-   * Cancel recording without submitting
-   */
-  const cancelRecording = useCallback(() => {
-    logVoiceStage(6, 'Recording cancelled by user');
-    if (durationTimerRef.current) {
-      window.clearInterval(durationTimerRef.current);
-      durationTimerRef.current = null;
-    }
-    speechRecognitionService.abortListening();
-    setVolume(0);
-    setTranscript('');
-    setInterimTranscript('');
-    activeTranscriptRef.current = '';
-    setError(null);
-    setState('ready');
-  }, []);
-
-  /**
    * Process recognized speech query with AI and speak response
    */
   const processUserQuery = useCallback(
@@ -263,6 +240,12 @@ export function useVoiceConversation(options?: {
         setState('ready');
         return;
       }
+
+      if (isSubmittingRef.current) {
+        logVoiceStage(11, `Preventing duplicate AI submission for query: "${text}"`);
+        return;
+      }
+      isSubmittingRef.current = true;
 
       setState('submitting_to_ai');
       logVoiceStage(11, `Displaying user transcript in conversation feed: "${text}"`);
@@ -323,6 +306,8 @@ export function useVoiceConversation(options?: {
             },
             onEnd: () => {
               logVoiceStage(15, 'Bilingual speech synthesis playback completed');
+              isSubmittingRef.current = false;
+              explicitStopInitiatedRef.current = false;
               setState('completed');
               if (resumeTimerRef.current) window.clearTimeout(resumeTimerRef.current);
               resumeTimerRef.current = window.setTimeout(() => {
@@ -340,6 +325,8 @@ export function useVoiceConversation(options?: {
             },
             onError: (ttsErr) => {
               console.warn('TTS playback error, recovering:', ttsErr);
+              isSubmittingRef.current = false;
+              explicitStopInitiatedRef.current = false;
               if (!sessionActiveRef.current) {
                 setState('ended');
                 return;
@@ -355,6 +342,8 @@ export function useVoiceConversation(options?: {
             },
           });
         } else {
+          isSubmittingRef.current = false;
+          explicitStopInitiatedRef.current = false;
           setState('completed');
           if (resumeTimerRef.current) window.clearTimeout(resumeTimerRef.current);
           resumeTimerRef.current = window.setTimeout(() => {
@@ -372,6 +361,8 @@ export function useVoiceConversation(options?: {
         }
       } catch (chatErr: any) {
         console.error('AI chat error during voice turn:', chatErr);
+        isSubmittingRef.current = false;
+        explicitStopInitiatedRef.current = false;
         setError({
           code: 'AI_ERROR',
           message: chatErr?.message || 'Không thể nhận phản hồi từ AI. Vui lòng thử lại.',
@@ -379,8 +370,71 @@ export function useVoiceConversation(options?: {
         setState('error');
       }
     },
-    [options]
+    [options, startRecording]
   );
+
+  /**
+   * Stop Recording explicitly and submit recognized speech
+   * Exclusively called when user presses the central Stop button
+   */
+  const stopRecordingAndSend = useCallback(async () => {
+    logVoiceStage(6, 'User tapped central Stop button to finalize turn');
+    if (isSubmittingRef.current) {
+      logVoiceStage(6, 'Turn submission already in flight, ignoring duplicate Stop click');
+      return;
+    }
+
+    explicitStopInitiatedRef.current = true;
+
+    if (durationTimerRef.current) {
+      window.clearInterval(durationTimerRef.current);
+      durationTimerRef.current = null;
+    }
+
+    setState('transcribing');
+    setVolume(0);
+
+    try {
+      const finalResult = await speechRecognitionService.stopListening();
+      const queryText = (
+        finalResult?.transcript ||
+        activeTranscriptRef.current ||
+        transcript
+      ).trim();
+
+      if (queryText.length > 0) {
+        await processUserQuery(queryText);
+      } else {
+        logVoiceStage(7, 'No spoken words captured upon Stop, resetting to ready state');
+        explicitStopInitiatedRef.current = false;
+        setState('ready');
+      }
+    } catch (stopErr: any) {
+      console.warn('Error during explicit stop finalization:', stopErr);
+      explicitStopInitiatedRef.current = false;
+      setState('ready');
+    }
+  }, [transcript, processUserQuery]);
+
+  /**
+   * Cancel recording without submitting
+   */
+  const cancelRecording = useCallback(() => {
+    logVoiceStage(6, 'Recording cancelled by user');
+    explicitStopInitiatedRef.current = false;
+    isSubmittingRef.current = false;
+    if (durationTimerRef.current) {
+      window.clearInterval(durationTimerRef.current);
+      durationTimerRef.current = null;
+    }
+    speechRecognitionService.abortListening();
+    setVolume(0);
+    setTranscript('');
+    setInterimTranscript('');
+    activeTranscriptRef.current = '';
+    setError(null);
+    setState('ready');
+  }, []);
 
   /**
    * Explicitly End the Entire Voice Session

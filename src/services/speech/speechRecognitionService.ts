@@ -48,6 +48,11 @@ export class SpeechRecognitionService {
   private currentLang: SpeechRecognitionLanguage = 'zh-CN';
   private simulatedVolumeTimer: number | null = null;
 
+  // Explicit Stop Workflow State
+  private accumulatedFinalTranscript: string = '';
+  private currentInterimTranscript: string = '';
+  private explicitStopTriggered: boolean = false;
+
   public static getInstance(): SpeechRecognitionService {
     if (!SpeechRecognitionService.instance) {
       SpeechRecognitionService.instance = new SpeechRecognitionService();
@@ -192,7 +197,11 @@ export class SpeechRecognitionService {
     }
 
     // Clean up any existing session
-    this.stopListening();
+    this.abortListening();
+
+    this.accumulatedFinalTranscript = '';
+    this.currentInterimTranscript = '';
+    this.explicitStopTriggered = false;
 
     this.onResultCallback = options.onResult;
     this.onVolumeCallback = options.onVolume;
@@ -234,8 +243,9 @@ export class SpeechRecognitionService {
 
   /**
    * Path A: Native Browser SpeechRecognition (Desktop Chrome)
+   * Configured for continuous recognition across natural pauses and breaths.
    */
-  private async startNativeRecognition(options: {
+  private async startNativeRecognition(_options?: {
     lang?: SpeechRecognitionLanguage;
     continuous?: boolean;
     onStart?: () => void;
@@ -245,9 +255,10 @@ export class SpeechRecognitionService {
       throw new Error('SpeechRecognition is not defined in this browser window.');
     }
 
-    logVoiceStage(4, 'Initializing Native SpeechRecognition instance');
+    logVoiceStage(4, 'Initializing Native SpeechRecognition instance with continuous stream');
     this.recognition = new SpeechRec();
-    this.recognition.continuous = options.continuous ?? false;
+    // Continuous is ALWAYS true so browser does NOT stop on short pauses
+    this.recognition.continuous = true;
     this.recognition.interimResults = true;
     this.recognition.maxAlternatives = 1;
 
@@ -267,44 +278,43 @@ export class SpeechRecognitionService {
     };
 
     this.recognition.onresult = (event: any) => {
-      let finalTranscript = '';
-      let interimTranscript = '';
-      let confidence = 0.9;
+      let sessionFinal = '';
+      let sessionInterim = '';
 
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
+      // Loop through all results from 0 to capture full session transcript
+      for (let i = 0; i < event.results.length; ++i) {
         const res = event.results[i];
         const text = res[0]?.transcript || '';
         if (res.isFinal) {
-          finalTranscript += text;
-          confidence = res[0]?.confidence || 0.9;
+          sessionFinal += text;
         } else {
-          interimTranscript += text;
+          sessionInterim += text;
         }
       }
 
-      if (interimTranscript.length > 0 || finalTranscript.length > 0) {
+      this.currentInterimTranscript = sessionInterim;
+      const combined = [this.accumulatedFinalTranscript, sessionFinal].filter(Boolean).join(' ').trim();
+
+      if (sessionInterim.length > 0 || combined.length > 0) {
         this.onVolumeCallback?.(Math.min(95, 45 + Math.round(Math.random() * 45)));
       }
 
-      logVoiceStage(10, `Native interim/final result: "${finalTranscript || interimTranscript}"`);
+      logVoiceStage(10, `Native interim/final result: "${combined || sessionInterim}"`);
       this.onResultCallback?.({
-        transcript: finalTranscript.trim(),
-        interimTranscript: interimTranscript.trim(),
-        isFinal: Boolean(finalTranscript.length > 0),
-        confidence,
+        transcript: combined,
+        interimTranscript: sessionInterim.trim(),
+        isFinal: Boolean(combined.length > 0),
+        confidence: 0.95,
         engine: 'native',
       });
     };
 
     this.recognition.onerror = (event: any) => {
       const errCode = event?.error || 'unknown';
-      console.warn('Native speech recognition error:', errCode);
+      console.warn('Native speech recognition event:', errCode);
 
       if (errCode === 'no-speech') {
-        this.onErrorCallback?.({
-          code: 'NO_SPEECH',
-          message: 'Chưa thu được giọng nói. Em hãy nói to và rõ hơn gần microphone nhé.',
-        });
+        // Pauses and breaths are natural; do NOT abort recording!
         return;
       }
 
@@ -314,6 +324,23 @@ export class SpeechRecognitionService {
 
     this.recognition.onend = () => {
       logVoiceStage(6, 'Native SpeechRecognition onend event fired');
+      
+      // If user has NOT pressed Stop and session is still active,
+      // restart recognition immediately so recording remains active!
+      if (!this.explicitStopTriggered && this.isListening) {
+        logVoiceStage(6, 'Native recognition onend fired before explicit Stop — auto-restarting to keep recording active');
+        if (this.currentInterimTranscript) {
+          this.accumulatedFinalTranscript = [this.accumulatedFinalTranscript, this.currentInterimTranscript].filter(Boolean).join(' ').trim();
+          this.currentInterimTranscript = '';
+        }
+        try {
+          this.recognition?.start();
+          return;
+        } catch (restartErr) {
+          console.warn('Failed to restart native recognition:', restartErr);
+        }
+      }
+
       this.isListening = false;
       this.stopSimulatedVolume();
       this.onEndCallback?.();
@@ -323,7 +350,8 @@ export class SpeechRecognitionService {
   }
 
   /**
-   * Path B: Mobile Audio Recording via MediaRecorder + Cloud Gemini STT
+   * Path B: Audio Recording via MediaRecorder + Cloud Gemini STT
+   * Configured for continuous accumulation until user explicitly taps Stop.
    */
   private async startCloudRecording(options: {
     onVolume?: (volumePercent: number) => void;
@@ -334,15 +362,18 @@ export class SpeechRecognitionService {
       this.isListening = true;
       logVoiceStage(3, 'Requesting microphone MediaStream via getUserMedia');
       await audioRecordingService.startRecording({
-        autoStopOnSilence: options.autoStopOnSilence ?? true,
-        silenceThresholdMs: options.silenceThresholdMs ?? 1400,
+        // Default to false: explicitly controlled by user pressing Stop button
+        autoStopOnSilence: options.autoStopOnSilence ?? false,
+        silenceThresholdMs: options.silenceThresholdMs ?? 4000,
         onVolume: (vol) => {
           options.onVolume?.(vol);
           this.onVolumeCallback?.(vol);
         },
         onSilenceDetected: () => {
-          logVoiceStage(6, 'Silence detected after speech (VAD), automatically finalizing utterance segment');
-          void this.stopListening();
+          if (options.autoStopOnSilence) {
+            logVoiceStage(6, 'Silence detected after speech (VAD), auto-stopping');
+            void this.stopListening();
+          }
         },
         onStateChange: (state) => {
           if (state === 'recording') {
@@ -371,12 +402,16 @@ export class SpeechRecognitionService {
   }
 
   /**
-   * Stop active listening session safely and retrieve final transcript
+   * Stop active listening session explicitly and finalize recognition
+   * Returns the final transcript result
    */
-  public async stopListening(): Promise<void> {
-    logVoiceStage(6, `Stop listening triggered (activeEngine: ${this.activeEngine})`);
+  public async stopListening(): Promise<STTRecognitionResult | null> {
+    logVoiceStage(6, `Stop listening triggered explicitly (activeEngine: ${this.activeEngine})`);
+    this.explicitStopTriggered = true;
+    this.isListening = false;
 
     if (this.activeEngine === 'native') {
+      this.stopSimulatedVolume();
       if (this.recognition) {
         try {
           this.recognition.stop();
@@ -384,17 +419,29 @@ export class SpeechRecognitionService {
           // ignore
         }
       }
-      setTimeout(() => {
-        if (this.recognition) {
-          this.cleanup();
-          this.onEndCallback?.();
-        }
-      }, 500);
+      // Brief pause to allow the final result event from Web Speech API to settle
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      const finalRecorded = [this.accumulatedFinalTranscript, this.currentInterimTranscript].filter(Boolean).join(' ').trim();
+      this.cleanup();
+
+      const result: STTRecognitionResult = {
+        transcript: finalRecorded,
+        interimTranscript: '',
+        isFinal: true,
+        confidence: 0.95,
+        engine: 'native',
+      };
+
+      if (finalRecorded) {
+        this.onResultCallback?.(result);
+      }
+      this.onEndCallback?.();
+      return result;
     } else {
-      // Cloud recording engine: stop recording and send to Gemini STT
+      // Cloud recording engine: stop recording and send audio Blob to Gemini STT
       const recorderState = audioRecordingService.getState();
       if (recorderState === 'recording' || recorderState === 'requesting') {
-        this.isListening = false;
         try {
           logVoiceStage(6, 'Stopping MediaRecorder and finalizing audio Blob');
           const result = await audioRecordingService.stopRecording();
@@ -407,7 +454,7 @@ export class SpeechRecognitionService {
               code: 'NO_SPEECH',
               message: 'Bản thu âm quá ngắn hoặc chưa thu được giọng nói rõ ràng. Em hãy nhấn nói lại nhé.',
             });
-            return;
+            return null;
           }
 
           logVoiceStage(8, 'Encoding audio to Base64 and uploading to Gemini Cloud STT');
@@ -434,19 +481,22 @@ export class SpeechRecognitionService {
           if (sttData && sttData.transcript && sttData.transcript.trim()) {
             logVoiceStage(10, `Recognized speech parsed: "${sttData.transcript.trim()}" (lang: ${sttData.detectedLanguage})`);
             logVoiceStage(11, 'Delivering recognized transcript to UI conversation callback');
-            this.onResultCallback?.({
+            const sttResult: STTRecognitionResult = {
               transcript: sttData.transcript.trim(),
               interimTranscript: '',
               isFinal: true,
               confidence: sttData.confidence || 0.95,
               engine: 'cloud',
-            });
+            };
+            this.onResultCallback?.(sttResult);
+            return sttResult;
           } else {
             logVoiceStage(10, 'Empty transcript or silence detected in audio');
             this.onErrorCallback?.({
               code: 'NO_SPEECH',
               message: 'Chưa nhận diện được giọng nói rõ ràng. Em hãy thử nói to hơn một chút gần micro nhé.',
             });
+            return null;
           }
         } catch (sttErr: any) {
           logVoiceStage(9, 'Cloud STT transcription error encountered', sttErr);
@@ -454,6 +504,7 @@ export class SpeechRecognitionService {
             code: 'AI_ERROR',
             message: sttErr?.message || 'Lỗi khi nhận diện giọng nói qua đám mây.',
           });
+          return null;
         } finally {
           this.cleanup();
           this.onEndCallback?.();
@@ -461,6 +512,7 @@ export class SpeechRecognitionService {
       } else {
         this.cleanup();
         this.onEndCallback?.();
+        return null;
       }
     }
   }
@@ -470,6 +522,9 @@ export class SpeechRecognitionService {
    */
   public abortListening(): void {
     logVoiceStage(6, 'Aborting listening session immediately');
+    this.explicitStopTriggered = true;
+    this.isListening = false;
+    this.stopSimulatedVolume();
     if (this.activeEngine === 'native') {
       if (this.recognition) {
         try {

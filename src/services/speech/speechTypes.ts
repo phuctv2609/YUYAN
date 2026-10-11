@@ -66,7 +66,7 @@ export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
   speechRate: 1.0,
   showPinyin: true,
   showVietnamese: true,
-  continuousMode: true,
+  continuousMode: false,
   autoPlayResponses: true,
   readingMode: 'all',
   preferredResponseLanguage: 'auto',

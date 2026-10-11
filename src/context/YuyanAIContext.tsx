@@ -260,6 +260,16 @@ export const YuyanAIProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setIsVoiceModalOpen(true);
   }, []);
 
+  useEffect(() => {
+    const handleOpenVoice = () => openVoiceModal();
+    window.addEventListener('yuyan:open-voice', handleOpenVoice);
+    (window as any).__yuyanOpenVoiceModal = openVoiceModal;
+    return () => {
+      window.removeEventListener('yuyan:open-voice', handleOpenVoice);
+      delete (window as any).__yuyanOpenVoiceModal;
+    };
+  }, [openVoiceModal]);
+
   const closeVoiceModal = useCallback(() => {
     setIsVoiceModalOpen(false);
   }, []);
