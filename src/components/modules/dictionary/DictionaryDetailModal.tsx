@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Volume2,
@@ -70,6 +71,26 @@ export const DictionaryDetailModal: React.FC<DictionaryDetailModalProps> = ({
     };
   }, [item?.id]);
 
+  // Lock body scroll, mark data-modal-open to suppress floating widgets, and listen to Escape key
+  useEffect(() => {
+    document.body.setAttribute('data-modal-open', 'true');
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.removeAttribute('data-modal-open');
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
   if (!item) return null;
 
   const characters = item.hanzi.split('').filter((ch) => /[\u4e00-\u9fa5]/.test(ch));
@@ -78,15 +99,23 @@ export const DictionaryDetailModal: React.FC<DictionaryDetailModalProps> = ({
   const lessonOccurrences = enrichment?.lesson_occurrences || [];
   const hanziBreakdown = enrichment?.hanzi_breakdown || [];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-modal flex items-center justify-center p-3 sm:p-5 md:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 isolate"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div
-        className="bg-surface border border-border-subtle rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden card-motion"
+        className="bg-surface border border-border-subtle rounded-2xl sm:rounded-3xl max-w-2xl w-full h-auto max-h-[calc(100dvh-28px)] sm:max-h-[calc(100dvh-48px)] flex flex-col shadow-2xl overflow-hidden card-motion"
         role="dialog"
         aria-modal="true"
+        aria-labelledby="dict-word-title"
       >
         {/* Modal Header */}
-        <div className="p-5 sm:p-6 border-b border-border-subtle flex items-start justify-between gap-4 bg-surface-secondary/40">
+        <div className="p-4 sm:p-5 sm:px-6 border-b border-border-subtle flex items-start justify-between gap-4 bg-surface-secondary/40 flex-shrink-0">
           <div className="space-y-1.5 flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary-soft text-primary uppercase">
@@ -172,7 +201,7 @@ export const DictionaryDetailModal: React.FC<DictionaryDetailModalProps> = ({
         </div>
 
         {/* Modal Scrollable Body */}
-        <div className="p-5 sm:p-6 overflow-y-auto space-y-6 custom-scrollbar">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-6 custom-scrollbar flex-1 min-h-0 overscroll-contain">
           {/* 1. Definitions & Senses */}
           <div className="space-y-2">
             <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider flex items-center gap-1.5">
@@ -384,10 +413,11 @@ export const DictionaryDetailModal: React.FC<DictionaryDetailModalProps> = ({
               , chuyển dịch từ kho dữ liệu CC-CEDICT.
             </p>
           </div>
+          <div className="h-2" />
         </div>
 
         {/* Modal Footer Actions */}
-        <div className="p-4 sm:p-5 border-t border-border-subtle bg-surface-secondary/40 flex flex-wrap items-center justify-between gap-3">
+        <div className="p-3.5 sm:p-4 sm:px-6 border-t border-border-subtle bg-surface-secondary/40 flex flex-wrap items-center justify-between gap-3 flex-shrink-0">
           <div className="flex items-center gap-2">
             <button
               onClick={() => onAskGemini(item)}
@@ -406,6 +436,7 @@ export const DictionaryDetailModal: React.FC<DictionaryDetailModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

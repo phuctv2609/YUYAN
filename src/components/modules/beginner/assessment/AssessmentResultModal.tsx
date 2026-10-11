@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Award, RotateCcw, ArrowRight } from 'lucide-react';
 import { AssessmentSessionState } from './assessmentTypes';
 import { calculateAssessmentResult, clearAssessmentSession } from './assessmentGenerator';
@@ -44,6 +45,25 @@ export const AssessmentResultModal: React.FC<AssessmentResultModalProps> = ({
     }
   }, [result.overallScore]);
 
+  useEffect(() => {
+    document.body.setAttribute('data-modal-open', 'true');
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onGoDashboard();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.removeAttribute('data-modal-open');
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onGoDashboard]);
+
   const getTier = (score: number) => {
     if (score >= 90) return { label: 'Xuất sắc — Đạt chuẩn ngữ âm Bắc Kinh!', color: 'text-emerald-500' };
     if (score >= 75) return { label: 'Tốt — Đã nắm vững nền tảng phát âm!', color: 'text-blue-500' };
@@ -52,9 +72,11 @@ export const AssessmentResultModal: React.FC<AssessmentResultModalProps> = ({
 
   const tier = getTier(result.overallScore);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-xl w-full p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-modal flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 isolate">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl max-w-xl w-full p-5 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl relative max-h-[88vh] sm:max-h-[90vh] overflow-y-auto">
         {/* Header with Trophy Badge */}
         <div className="text-center space-y-2">
           <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-amber-400 to-yellow-300 text-white flex items-center justify-center mx-auto shadow-lg">
@@ -136,6 +158,7 @@ export const AssessmentResultModal: React.FC<AssessmentResultModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

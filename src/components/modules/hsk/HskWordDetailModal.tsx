@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Volume2,
@@ -73,6 +74,25 @@ export const HskWordDetailModal: React.FC<HskWordDetailModalProps> = ({
     };
   }, [entryId]);
 
+  useEffect(() => {
+    document.body.setAttribute('data-modal-open', 'true');
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.removeAttribute('data-modal-open');
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
   if (!entryId) return null;
 
   const handlePlayAudio = async (text: string) => {
@@ -138,15 +158,22 @@ export const HskWordDetailModal: React.FC<HskWordDetailModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-modal flex items-center justify-center p-2.5 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 isolate"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div
-        className="bg-surface border border-border-subtle rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden relative"
+        className="bg-surface border border-border-subtle rounded-2xl sm:rounded-3xl shadow-2xl max-w-2xl w-full h-auto max-h-[calc(100dvh-28px)] sm:max-h-[calc(100dvh-48px)] flex flex-col overflow-hidden relative card-motion"
         role="dialog"
         aria-modal="true"
       >
         {/* Header Bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-divider-line bg-surface-secondary/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-divider-line bg-surface-secondary/50 flex-shrink-0">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-primary" />
             <span className="text-xs font-bold uppercase tracking-wider text-text-muted">
@@ -163,7 +190,7 @@ export const HskWordDetailModal: React.FC<HskWordDetailModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-5 sm:p-6 space-y-6 overscroll-contain">
           {loading ? (
             <div className="py-20 flex flex-col items-center justify-center gap-3 text-text-muted">
               <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
@@ -493,6 +520,7 @@ export const HskWordDetailModal: React.FC<HskWordDetailModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

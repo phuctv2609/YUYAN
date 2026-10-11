@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Award,
   Timer,
@@ -67,6 +68,28 @@ export const ExamView: React.FC = () => {
   const [hasSavedSession, setHasSavedSession] = useState<boolean>(false);
 
   const timerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const isAnyModalOpen = showSubmitModal || showCoverageModal;
+    if (!isAnyModalOpen) return;
+    document.body.setAttribute('data-modal-open', 'true');
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowSubmitModal(false);
+        setShowCoverageModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.removeAttribute('data-modal-open');
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showSubmitModal, showCoverageModal]);
 
   // Available papers for selected version and level
   const availablePapers = useMemo(() => {
@@ -1114,9 +1137,14 @@ export const ExamView: React.FC = () => {
       )}
 
       {/* SUBMISSION CONFIRMATION MODAL */}
-      {showSubmitModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-surface rounded-2xl border border-border-subtle p-6 max-w-md w-full shadow-lg space-y-4 animate-in fade-in zoom-in-95">
+      {showSubmitModal && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-modal bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 isolate"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowSubmitModal(false);
+          }}
+        >
+          <div className="bg-surface rounded-2xl border border-border-subtle p-5 sm:p-6 max-w-md w-full shadow-lg space-y-4 animate-in fade-in zoom-in-95">
             <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto">
               <AlertTriangle className="w-6 h-6" />
             </div>
@@ -1134,25 +1162,31 @@ export const ExamView: React.FC = () => {
             <div className="flex gap-2.5 pt-2">
               <button
                 onClick={() => setShowSubmitModal(false)}
-                className="flex-1 py-2.5 rounded-xl bg-surface-secondary text-text-secondary text-xs font-bold hover:bg-border-subtle transition-all"
+                className="flex-1 py-2.5 rounded-xl bg-surface-secondary text-text-secondary text-xs font-bold hover:bg-border-subtle transition-all cursor-pointer"
               >
                 Quay lại làm tiếp
               </button>
               <button
                 onClick={() => handleFinalSubmit(false)}
-                className="flex-1 py-2.5 rounded-xl bg-primary text-white text-xs font-bold shadow-xs hover:bg-primary-hover transition-all"
+                className="flex-1 py-2.5 rounded-xl bg-primary text-white text-xs font-bold shadow-xs hover:bg-primary-hover transition-all cursor-pointer"
               >
                 Xác nhận nộp bài
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* HSK DATA HEALTH & COVERAGE DASHBOARD MODAL */}
-      {showCoverageModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-surface rounded-2xl border border-border-subtle p-6 max-w-3xl w-full shadow-lg space-y-4 max-h-[85vh] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95">
+      {showCoverageModal && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-modal bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 isolate"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowCoverageModal(false);
+          }}
+        >
+          <div className="bg-surface rounded-2xl sm:rounded-3xl border border-border-subtle p-5 sm:p-6 max-w-3xl w-full shadow-lg space-y-4 max-h-[85vh] sm:max-h-[88vh] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-divider-line pb-3">
               <div>
                 <h3 className="text-base font-bold text-text-primary flex items-center gap-2">
@@ -1256,7 +1290,8 @@ export const ExamView: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

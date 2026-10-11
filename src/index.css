@@ -21,11 +21,19 @@
   --primary: #0062a1;
   --primary-hover: #4B91D8;
   --primary-active: #3F83CA;
+  --primary-dark: #004573;
   --primary-container: #5b9fe3;
   --primary-soft: #EAF4FF;
   --primary-ultra-soft: #F4F9FE;
   --coral-soft: #FFE8EC;
   --deep-blue: #2869A7;
+
+  /* AI Action Button Semantic Tokens */
+  --ai-button-bg: #0062a1;
+  --ai-button-fg: #FFFFFF;
+  --ai-button-hover-bg: #004f82;
+  --ai-button-active-bg: #003e66;
+  --ai-button-border: transparent;
 
   /* Premium Glow Tokens */
   --glow-primary: 0 0 20px rgba(91, 159, 227, 0.35);
@@ -69,11 +77,19 @@
   --primary: #5B9FE3;
   --primary-hover: #7AB4ED;
   --primary-active: #4A8FD8;
+  --primary-dark: #3F83CA;
   --primary-container: #3F83CA;
   --primary-soft: #1A2F61;
   --primary-ultra-soft: #13224B;
   --coral-soft: #381A28;
   --deep-blue: #7AB4ED;
+
+  /* AI Action Button Semantic Tokens (Dark Mode) */
+  --ai-button-bg: #2563EB;
+  --ai-button-fg: #FFFFFF;
+  --ai-button-hover-bg: #1D4ED8;
+  --ai-button-active-bg: #1E40AF;
+  --ai-button-border: rgba(96, 165, 250, 0.3);
 
   /* Calibrated Dark Glow Tokens */
   --glow-primary: 0 0 24px rgba(91, 159, 227, 0.5);
@@ -234,4 +250,13 @@
   .light-beam-shimmer::after {
     display: none !important;
   }
+}
+
+/* Stacking Context & Layer System Guarantees: suppress floating widgets during active modal dialogs */
+body[data-modal-open] .z-launcher {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  transform: scale(0.9) !important;
+  transition: opacity 0.2s ease, transform 0.2s ease !important;
 }

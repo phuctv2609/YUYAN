@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { VolumeX, X, Monitor, Smartphone, Apple, CheckCircle2, RefreshCw } from 'lucide-react';
 import { audioStateStore } from '../../services/audio/audioState';
 import { browserTTSProvider } from '../../services/audio/providers/browserTTSProvider';
@@ -18,6 +19,26 @@ export const MandarinVoiceHelpModal: React.FC = () => {
     return unsubscribe;
   }, []);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    document.body.setAttribute('data-modal-open', 'true');
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.removeAttribute('data-modal-open');
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
+
   const handleCheckVoices = async () => {
     setIsChecking(true);
     const available = await browserTTSProvider.isAvailable();
@@ -31,10 +52,16 @@ export const MandarinVoiceHelpModal: React.FC = () => {
   };
 
   if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-surface border border-border-subtle rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl space-y-5 card-motion">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-modal flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 isolate"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) setIsOpen(false);
+      }}
+    >
+      <div className="bg-surface border border-border-subtle rounded-2xl sm:rounded-3xl max-w-lg w-full p-5 sm:p-7 shadow-2xl space-y-5 card-motion">
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -149,6 +176,7 @@ export const MandarinVoiceHelpModal: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

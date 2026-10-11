@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Sparkles,
   Search,
@@ -25,6 +26,26 @@ export const RadicalView: React.FC<RadicalViewProps> = ({ onOpenHanzi, onOpenWor
   const [selectedStroke, setSelectedStroke] = useState<number | 'all'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [activeRadical, setActiveRadical] = useState<CanonicalRadical | null>(null);
+
+  useEffect(() => {
+    if (!activeRadical) return;
+    document.body.setAttribute('data-modal-open', 'true');
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActiveRadical(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.removeAttribute('data-modal-open');
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeRadical]);
 
   // All 214 Kangxi radicals
   const allRadicals = useMemo(() => radicalRepository.getAll(), []);
@@ -230,9 +251,14 @@ export const RadicalView: React.FC<RadicalViewProps> = ({ onOpenHanzi, onOpenWor
       </div>
 
       {/* Radical Detail Drawer / Modal */}
-      {activeRadical && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-surface rounded-3xl border border-border-subtle shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto custom-scrollbar p-6 sm:p-8 space-y-6 animate-in zoom-in-95 duration-150">
+      {activeRadical && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-modal flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150 isolate"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setActiveRadical(null);
+          }}
+        >
+          <div className="bg-surface rounded-2xl sm:rounded-3xl border border-border-subtle shadow-2xl max-w-2xl w-full max-h-[88vh] sm:max-h-[90vh] overflow-y-auto custom-scrollbar p-5 sm:p-8 space-y-6 animate-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="flex items-start justify-between gap-4 border-b border-divider-line pb-4">
               <div className="flex items-center gap-4">
@@ -365,7 +391,8 @@ export const RadicalView: React.FC<RadicalViewProps> = ({ onOpenHanzi, onOpenWor
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

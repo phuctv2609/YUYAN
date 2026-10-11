@@ -41,3 +41,5 @@ scripts/verification_screenshots/
 tools/autosync/*.log
 tools/autosync/.autosync.pid
 tools/autosync/.sync.lock
+temp_chrome*/
+

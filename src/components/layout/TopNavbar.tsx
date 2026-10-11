@@ -242,10 +242,10 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
           </div>
         </div>
 
-        {/* Smart Search Field (Tìm kiếm thông minh) */}
+        {/* Smart Search Field (Desktop & Tablet) */}
         <div
           onClick={onOpenSearchModal}
-          className="relative flex-1 min-w-0 max-w-xs md:max-w-sm lg:max-w-md xl:max-w-lg cursor-pointer group"
+          className="hidden md:flex relative flex-1 min-w-0 max-w-xs md:max-w-sm lg:max-w-md xl:max-w-lg cursor-pointer group"
           title="Tìm kiếm thông minh (Phím tắt: Ctrl + K)"
         >
           <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 absolute left-2.5 sm:left-3.5 top-1/2 -translate-y-1/2 text-text-muted group-hover:text-primary transition-colors pointer-events-none" />
@@ -265,34 +265,54 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
         </div>
       </div>
 
-      {/* Center Spacer: Open, uncluttered layout matching the modern redesign */}
+      {/* Center Spacer: Open, uncluttered layout matching modern redesign */}
       <div className="flex-1 hidden md:block" />
 
-      {/* Right: AI Quick Access, Streak Telemetry, Notifications, Theme Switcher & Profile */}
+      {/* Right: Search (mobile), AI Quick Access, Streak Telemetry, Notifications, Theme Switcher & Profile */}
       <div className="flex items-center gap-1 sm:gap-2 md:gap-2.5 lg:gap-3 flex-shrink-0">
-        {/* AI hội thoại Button: Prominent quick access to conversational AI */}
+        {/* Mobile Search Icon Button (< 768px) */}
         <button
           type="button"
+          onClick={onOpenSearchModal}
+          className="p-1.5 sm:p-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-secondary md:hidden flex-shrink-0 transition-colors cursor-pointer"
+          title="Tìm kiếm thông minh (Ctrl + K)"
+          aria-label="Tìm kiếm"
+        >
+          <Search className="w-4.5 h-4.5" />
+        </button>
+
+        {/* AI hội thoại Button: Prominent, high-contrast brand blue access */}
+        <button
+          data-testid="top-navbar-ai-btn"
+          type="button"
           onClick={() => onSelectTab && onSelectTab('ai')}
-          className={`flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 lg:px-4 lg:py-2 rounded-full font-bold text-xs sm:text-sm transition-all duration-150 active:scale-95 shadow-xs cursor-pointer flex-shrink-0 ${
+          className={`flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 lg:px-4 lg:py-2 rounded-full font-bold text-xs sm:text-sm transition-all duration-150 active:scale-95 shadow-xs cursor-pointer flex-shrink-0 border border-transparent ${
             currentTab === 'ai'
-              ? 'bg-primary-dark text-white shadow-md ring-2 ring-primary/30'
-              : 'bg-primary hover:bg-primary-dark text-white hover:shadow-md'
+              ? 'bg-[#004573] dark:bg-blue-600 text-white shadow-md ring-2 ring-sky-400/50'
+              : 'bg-[#0062a1] hover:bg-[#004f82] dark:bg-[#2563eb] dark:hover:bg-[#1d4ed8] text-white hover:shadow-md'
           }`}
+          style={{
+            backgroundColor:
+              currentTab === 'ai'
+                ? 'var(--ai-button-active-bg, #004573)'
+                : 'var(--ai-button-bg, #0062a1)',
+            color: '#ffffff',
+          }}
           title="Mở AI hội thoại - Trợ lý luyện nói tiếng Trung thông minh"
           aria-label="AI hội thoại"
         >
-          <Bot className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 flex-shrink-0" />
-          <span className="hidden lg:inline">AI hội thoại</span>
+          <Bot className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 flex-shrink-0 text-white" />
+          <span className="hidden lg:inline text-white">AI hội thoại</span>
+          <span className="inline lg:hidden text-white font-bold text-[11px] sm:text-xs">AI</span>
         </button>
 
-        {/* Streak Chip (Chuỗi ngày học) */}
+        {/* Streak Chip (Chuỗi ngày học) - Visible on tablet/desktop, compact in drawer for phones */}
         <div
           onClick={() => {
             showToast(`Bạn đã duy trì chuỗi học ${profile.studyStreakDays} ngày liên tiếp!`, 'success');
             if (onSelectTab) onSelectTab('progress');
           }}
-          className="flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 bg-amber-500/10 dark:bg-amber-500/15 rounded-full border border-amber-500/20 text-amber-600 dark:text-amber-400 shadow-2xs cursor-pointer hover:bg-amber-500/20 transition-all active:scale-95 flex-shrink-0"
+          className="hidden sm:flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 bg-amber-500/10 dark:bg-amber-500/15 rounded-full border border-amber-500/20 text-amber-600 dark:text-amber-400 shadow-2xs cursor-pointer hover:bg-amber-500/20 transition-all active:scale-95 flex-shrink-0"
           title={`Chuỗi học liên tiếp: ${profile.studyStreakDays} ngày`}
         >
           <Flame className="w-3 h-3 sm:w-4 sm:h-4 text-amber-500 fill-amber-500 flex-shrink-0" />

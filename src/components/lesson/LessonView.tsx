@@ -182,7 +182,7 @@ export const LessonView: React.FC<LessonViewProps> = ({
       />
 
       {/* Main Workspace Content Area */}
-      <div className="w-full max-w-[1440px] mx-auto p-3 sm:p-6 flex-1 min-h-0">
+      <div className="w-full max-w-[1440px] mx-auto p-3 sm:p-6 pb-[calc(var(--audio-controller-height,68px)+24px)] md:pb-[calc(var(--audio-controller-height,68px)+32px)] flex-1 min-h-0">
         {normalizedTab === 'bài khóa' ? (
           <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
             {/* Left Reading Canvas */}

@@ -302,10 +302,10 @@ const AppContent: React.FC = () => {
       {/* Mandarin Voice Help Modal for missing zh-CN system speech package */}
       <MandarinVoiceHelpModal />
 
-      {/* Main Single Document Scroll Container */}
+      {/* Main Single Document Scroll Container with Guaranteed Mobile Bottom Clearance */}
       <main
         id="main-scroll-container"
-        className="flex-1 md:ml-[260px] pt-[68px] pb-0 h-full overflow-y-auto overscroll-y-contain custom-scrollbar relative z-10"
+        className="flex-1 md:ml-[260px] pt-[68px] pb-[calc(var(--mobile-navigation-height,60px)+env(safe-area-inset-bottom,0px)+16px)] md:pb-8 h-full overflow-y-auto overscroll-y-contain custom-scrollbar relative z-10"
       >
         {route.isNotFound ? (
           /* Friendly 404 Not Found Page */

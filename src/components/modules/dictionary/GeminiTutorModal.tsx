@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Bot,
@@ -233,15 +234,41 @@ export const GeminiTutorModal: React.FC<GeminiTutorModalProps> = ({ item, onClos
     setTimeout(() => setCopied(false), 2000);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+  useEffect(() => {
+    document.body.setAttribute('data-modal-open', 'true');
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.removeAttribute('data-modal-open');
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-modal flex items-center justify-center p-3 sm:p-5 md:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 isolate"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div
-        className="bg-surface border border-border-subtle rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden card-motion"
+        className="bg-surface border border-border-subtle rounded-2xl sm:rounded-3xl max-w-2xl w-full h-auto max-h-[calc(100dvh-28px)] sm:max-h-[calc(100dvh-48px)] flex flex-col shadow-2xl overflow-hidden card-motion"
         role="dialog"
         aria-modal="true"
       >
         {/* Header */}
-        <div className="p-5 sm:p-6 border-b border-border-subtle flex items-start justify-between gap-4 bg-gradient-to-r from-primary-soft/40 via-surface to-secondary-soft/30">
+        <div className="p-4 sm:p-5 sm:px-6 border-b border-border-subtle flex items-start justify-between gap-4 bg-gradient-to-r from-primary-soft/40 via-surface to-secondary-soft/30 flex-shrink-0">
           <div className="space-y-1">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
               <Bot className="w-3.5 h-3.5" />
@@ -267,7 +294,7 @@ export const GeminiTutorModal: React.FC<GeminiTutorModalProps> = ({ item, onClos
         </div>
 
         {/* Mode Selector Tabs */}
-        <div className="flex items-center gap-1.5 px-5 sm:px-6 py-3 border-b border-border-subtle bg-surface-secondary/50 overflow-x-auto scrollbar-none">
+        <div className="flex items-center gap-1.5 px-5 sm:px-6 py-3 border-b border-border-subtle bg-surface-secondary/50 overflow-x-auto scrollbar-none flex-shrink-0">
           <button
             onClick={() => setActiveMode('context')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
@@ -318,7 +345,7 @@ export const GeminiTutorModal: React.FC<GeminiTutorModalProps> = ({ item, onClos
         </div>
 
         {/* Body Content */}
-        <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 min-h-0 custom-scrollbar overscroll-contain">
           {activeMode === 'context' && getContextAnalysis()}
           {activeMode === 'synonyms' && getSynonymAnalysis()}
           {activeMode === 'examples' && getExampleAnalysis()}
@@ -385,6 +412,7 @@ export const GeminiTutorModal: React.FC<GeminiTutorModalProps> = ({ item, onClos
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Sparkles,
   Volume2,
@@ -50,23 +50,31 @@ export const AiWordUsageSection: React.FC<AiWordUsageSectionProps> = ({
   const [copiedSentenceIdx, setCopiedSentenceIdx] = useState<number | null>(null);
   const [copiedAll, setCopiedAll] = useState<boolean>(false);
 
-  const fetchUsage = async (forceRefresh = false) => {
-    if (!word) return;
+  const activeWordRef = useRef<string>(word);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const fetchUsage = async (forceRefresh = false, controller?: AbortController) => {
+    const currentWord = word;
+    if (!currentWord) return;
+
     setLoading(true);
     setError(null);
 
     const opts: FetchWordUsageOptions = {
-      word,
+      word: currentWord,
       pinyin,
       pos,
       meanings,
       hskFramework,
       hskLevel,
       skipCache: forceRefresh,
+      signal: controller?.signal,
     };
 
     try {
       const res = await aiWordUsageService.getWordUsage(opts);
+      if (activeWordRef.current !== currentWord) return; // Stale request, ignore
+
       if (res.success && res.data) {
         setData(res.data);
         setIsCached(Boolean(res.cached));
@@ -77,22 +85,42 @@ export const AiWordUsageSection: React.FC<AiWordUsageSectionProps> = ({
         });
       }
     } catch (err: any) {
+      if (err.name === 'AbortError' || controller?.signal.aborted) {
+        return;
+      }
+      if (activeWordRef.current !== currentWord) return;
       setError({
         code: 'NETWORK_ERROR',
         message: err?.message || 'Lỗi mạng khi kết nối tới dịch vụ AI.',
       });
     } finally {
-      setLoading(false);
+      if (activeWordRef.current === currentWord) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
+    activeWordRef.current = word;
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     if (autoLoad && word) {
-      fetchUsage();
+      fetchUsage(false, controller);
     } else {
       setData(null);
       setError(null);
+      setLoading(false);
     }
+
+    return () => {
+      controller.abort();
+      abortControllerRef.current = null;
+    };
   }, [word]);
 
   const handlePlaySentence = async (text: string, idx: number) => {
@@ -203,21 +231,25 @@ export const AiWordUsageSection: React.FC<AiWordUsageSectionProps> = ({
       {/* Body Area */}
       {expanded && (
         <div className="p-4 sm:p-5 space-y-4 text-xs sm:text-sm">
-          {/* Loading State */}
+          {/* Loading State: Compact, non-intrusive indicator preserving modal usability */}
           {loading && (
-            <div className="py-8 flex flex-col items-center justify-center gap-3 text-center">
-              <div className="relative">
-                <div className="w-10 h-10 rounded-full border-3 border-primary/20 border-t-primary animate-spin" />
-                <Sparkles className="w-4 h-4 text-primary absolute inset-0 m-auto" />
+            <div className="py-3 px-4 rounded-xl bg-surface-secondary/70 border border-primary/20 flex items-center justify-between gap-3 text-left animate-in fade-in duration-150">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="relative flex-shrink-0">
+                  <div className="w-5 h-5 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-text-primary truncate">
+                    Đang phân tích cách dùng từ qua AI...
+                  </p>
+                  <p className="text-[11px] text-text-muted truncate mt-0.5">
+                    Đang tạo ngữ pháp, ví dụ thực tế &amp; lưu ý sư phạm
+                  </p>
+                </div>
               </div>
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-text-primary">
-                  Đang phân tích cách dùng từ qua AI...
-                </p>
-                <p className="text-xs text-text-muted">
-                  Đang tạo cấu trúc ngữ pháp, 3 câu ví dụ thực tế và lưu ý người học
-                </p>
-              </div>
+              <span className="text-[10px] font-bold text-primary px-2 py-0.5 rounded-md bg-primary/10 whitespace-nowrap flex-shrink-0">
+                Đang xử lý
+              </span>
             </div>
           )}
 
