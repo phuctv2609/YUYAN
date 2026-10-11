@@ -20,6 +20,17 @@ export interface AudioRecordingError {
   technicalError?: string;
 }
 
+export interface StartAudioRecordingOptions {
+  onVolume?: (volumePercent: number) => void;
+  onDuration?: (elapsedSeconds: number) => void;
+  onStateChange?: (state: RecordingState) => void;
+  onSilenceDetected?: () => void;
+  autoStopOnSilence?: boolean;
+  silenceThresholdMs?: number;
+  speechThresholdPercent?: number;
+  maxDurationSeconds?: number;
+}
+
 export class AudioRecordingService {
   private mediaRecorder: MediaRecorder | null = null;
   private mediaStream: MediaStream | null = null;
@@ -34,6 +45,8 @@ export class AudioRecordingService {
   private onVolumeCallback?: (volume: number) => void;
   private onDurationCallback?: (seconds: number) => void;
   private onStateCallback?: (state: RecordingState) => void;
+  private onSilenceDetectedCallback?: () => void;
+  private hasSpoken: boolean = false;
 
   /**
    * Detects the best supported audio MIME type supported by browser MediaRecorder
@@ -71,11 +84,7 @@ export class AudioRecordingService {
   /**
    * Start audio capture from device microphone
    */
-  public async startRecording(options?: {
-    onVolume?: (volumePercent: number) => void;
-    onDuration?: (elapsedSeconds: number) => void;
-    onStateChange?: (state: RecordingState) => void;
-  }): Promise<void> {
+  public async startRecording(options?: StartAudioRecordingOptions): Promise<void> {
     if (!this.isSupported()) {
       const err: AudioRecordingError = {
         code: 'UNSUPPORTED',
@@ -91,6 +100,8 @@ export class AudioRecordingService {
     this.onVolumeCallback = options?.onVolume;
     this.onDurationCallback = options?.onDuration;
     this.onStateCallback = options?.onStateChange;
+    this.onSilenceDetectedCallback = options?.onSilenceDetected;
+    this.hasSpoken = false;
 
     this.setState('requesting');
     this.chunks = [];
@@ -136,7 +147,7 @@ export class AudioRecordingService {
       } as AudioRecordingError;
     }
 
-    // Setup Volume Analyser
+    // Setup Volume Analyser and Voice Activity Detection (VAD)
     try {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       if (AudioContextClass) {
@@ -149,6 +160,13 @@ export class AudioRecordingService {
         this.analyser = analyser;
 
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const speechThreshold = options?.speechThresholdPercent ?? 12;
+        const silenceTimeoutMs = options?.silenceThresholdMs ?? 1400;
+        const autoStop = options?.autoStopOnSilence ?? true;
+        const maxDurationMs = (options?.maxDurationSeconds ?? 25) * 1000;
+        let lastSpeechTime = 0;
+        let silenceTriggered = false;
+
         const meter = () => {
           if (this.state === 'recording' && this.analyser) {
             this.analyser.getByteFrequencyData(dataArray);
@@ -161,6 +179,31 @@ export class AudioRecordingService {
             if (this.onVolumeCallback) {
               this.onVolumeCallback(volumePercent);
             }
+
+            const now = Date.now();
+            const elapsed = now - this.startTime;
+
+            // Track voice activity
+            if (volumePercent >= speechThreshold) {
+              this.hasSpoken = true;
+              lastSpeechTime = now;
+            }
+
+            // Automatic silence-based submission
+            if (autoStop && !silenceTriggered && this.state === 'recording') {
+              if (this.hasSpoken && lastSpeechTime > 0 && (now - lastSpeechTime >= silenceTimeoutMs) && elapsed >= 1000) {
+                silenceTriggered = true;
+                if (this.onSilenceDetectedCallback) {
+                  this.onSilenceDetectedCallback();
+                }
+              } else if (elapsed >= maxDurationMs) {
+                silenceTriggered = true;
+                if (this.onSilenceDetectedCallback) {
+                  this.onSilenceDetectedCallback();
+                }
+              }
+            }
+
             this.animFrameId = requestAnimationFrame(meter);
           }
         };
@@ -330,13 +373,19 @@ export class AudioRecordingService {
     }
   }
 
+  public getHasSpoken(): boolean {
+    return this.hasSpoken;
+  }
+
   public cleanup(): void {
     this.cleanupTracks();
     this.mediaRecorder = null;
     this.chunks = [];
+    this.hasSpoken = false;
     this.onVolumeCallback = undefined;
     this.onDurationCallback = undefined;
     this.onStateCallback = undefined;
+    this.onSilenceDetectedCallback = undefined;
   }
 }
 

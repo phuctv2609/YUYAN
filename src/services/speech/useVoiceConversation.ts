@@ -78,6 +78,8 @@ export function useVoiceConversation(options?: {
   );
 
   const durationTimerRef = useRef<number | null>(null);
+  const resumeTimerRef = useRef<number | null>(null);
+  const sessionActiveRef = useRef<boolean>(true);
   const activeTranscriptRef = useRef<string>('');
   const stateRef = useRef<VoiceConversationState>(state);
   stateRef.current = state;
@@ -117,6 +119,9 @@ export function useVoiceConversation(options?: {
       if (durationTimerRef.current) {
         window.clearInterval(durationTimerRef.current);
       }
+      if (resumeTimerRef.current) {
+        window.clearTimeout(resumeTimerRef.current);
+      }
       speechRecognitionService.abortListening();
       speechSynthesisService.stop();
     };
@@ -128,6 +133,11 @@ export function useVoiceConversation(options?: {
    */
   const startRecording = useCallback(async () => {
     logVoiceStage(1, 'User tapped Microphone action button');
+    sessionActiveRef.current = true;
+    if (resumeTimerRef.current) {
+      window.clearTimeout(resumeTimerRef.current);
+      resumeTimerRef.current = null;
+    }
 
     // 1. Mobile user gesture audio unlock
     speechSynthesisService.unlockAudioOnUserGesture();
@@ -314,20 +324,51 @@ export function useVoiceConversation(options?: {
             onEnd: () => {
               logVoiceStage(15, 'Bilingual speech synthesis playback completed');
               setState('completed');
-              setTimeout(() => {
-                setState((curr) => (curr === 'completed' ? 'ready' : curr));
-              }, 300);
+              if (resumeTimerRef.current) window.clearTimeout(resumeTimerRef.current);
+              resumeTimerRef.current = window.setTimeout(() => {
+                if (!sessionActiveRef.current) {
+                  setState('ended');
+                  return;
+                }
+                if (settingsRef.current.continuousMode) {
+                  logVoiceStage(1, 'Continuous session active: auto-resuming listening for next turn');
+                  void startRecording();
+                } else {
+                  setState('ready');
+                }
+              }, 600);
             },
             onError: (ttsErr) => {
               console.warn('TTS playback error, recovering:', ttsErr);
-              setState('ready');
+              if (!sessionActiveRef.current) {
+                setState('ended');
+                return;
+              }
+              if (settingsRef.current.continuousMode) {
+                if (resumeTimerRef.current) window.clearTimeout(resumeTimerRef.current);
+                resumeTimerRef.current = window.setTimeout(() => {
+                  if (sessionActiveRef.current) void startRecording();
+                }, 600);
+              } else {
+                setState('ready');
+              }
             },
           });
         } else {
           setState('completed');
-          setTimeout(() => {
-            setState((curr) => (curr === 'completed' ? 'ready' : curr));
-          }, 200);
+          if (resumeTimerRef.current) window.clearTimeout(resumeTimerRef.current);
+          resumeTimerRef.current = window.setTimeout(() => {
+            if (!sessionActiveRef.current) {
+              setState('ended');
+              return;
+            }
+            if (settingsRef.current.continuousMode) {
+              logVoiceStage(1, 'Continuous session active: auto-resuming listening for next turn');
+              void startRecording();
+            } else {
+              setState('ready');
+            }
+          }, 600);
         }
       } catch (chatErr: any) {
         console.error('AI chat error during voice turn:', chatErr);
@@ -340,6 +381,27 @@ export function useVoiceConversation(options?: {
     },
     [options]
   );
+
+  /**
+   * Explicitly End the Entire Voice Session
+   * Called only when user presses "Đóng" or closes modal.
+   */
+  const endSession = useCallback(() => {
+    logVoiceStage(6, 'Voice session explicitly ended by user');
+    sessionActiveRef.current = false;
+    if (durationTimerRef.current) {
+      window.clearInterval(durationTimerRef.current);
+      durationTimerRef.current = null;
+    }
+    if (resumeTimerRef.current) {
+      window.clearTimeout(resumeTimerRef.current);
+      resumeTimerRef.current = null;
+    }
+    speechRecognitionService.abortListening();
+    speechSynthesisService.stop();
+    setVolume(0);
+    setState('ended');
+  }, []);
 
   /**
    * Switch STT recognition engine (native / cloud)
@@ -361,6 +423,10 @@ export function useVoiceConversation(options?: {
    */
   const stopSpeaking = useCallback(() => {
     speechSynthesisService.stop();
+    if (resumeTimerRef.current) {
+      window.clearTimeout(resumeTimerRef.current);
+      resumeTimerRef.current = null;
+    }
     if (stateRef.current === 'speaking') {
       setState('ready');
     }
@@ -416,6 +482,7 @@ export function useVoiceConversation(options?: {
     startRecording,
     stopRecordingAndSend,
     cancelRecording,
+    endSession,
     stopSpeaking,
     replayLastResponse,
   };

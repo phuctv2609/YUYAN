@@ -10,6 +10,7 @@ export type VoiceConversationState =
   | 'idle'
   | 'requesting_permission'
   | 'ready'
+  | 'listening'
   | 'recording'
   | 'transcribing'
   | 'submitting_to_ai'
@@ -17,6 +18,7 @@ export type VoiceConversationState =
   | 'speaking'
   | 'completed'
   | 'paused'
+  | 'ended'
   | 'error';
 
 export type ReadingMode = 'all' | 'chinese_only' | 'vietnamese_only';
@@ -64,7 +66,7 @@ export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
   speechRate: 1.0,
   showPinyin: true,
   showVietnamese: true,
-  continuousMode: false,
+  continuousMode: true,
   autoPlayResponses: true,
   readingMode: 'all',
   preferredResponseLanguage: 'auto',

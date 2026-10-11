@@ -161,6 +161,8 @@ export class SpeechRecognitionService {
     lang?: SpeechRecognitionLanguage;
     engineMode?: STTEngineMode;
     continuous?: boolean;
+    autoStopOnSilence?: boolean;
+    silenceThresholdMs?: number;
     onResult: (result: STTRecognitionResult) => void;
     onVolume?: (volumePercent: number) => void;
     onError?: (err: VoiceError) => void;
@@ -325,14 +327,22 @@ export class SpeechRecognitionService {
    */
   private async startCloudRecording(options: {
     onVolume?: (volumePercent: number) => void;
+    autoStopOnSilence?: boolean;
+    silenceThresholdMs?: number;
   }): Promise<void> {
     try {
       this.isListening = true;
       logVoiceStage(3, 'Requesting microphone MediaStream via getUserMedia');
       await audioRecordingService.startRecording({
+        autoStopOnSilence: options.autoStopOnSilence ?? true,
+        silenceThresholdMs: options.silenceThresholdMs ?? 1400,
         onVolume: (vol) => {
           options.onVolume?.(vol);
           this.onVolumeCallback?.(vol);
+        },
+        onSilenceDetected: () => {
+          logVoiceStage(6, 'Silence detected after speech (VAD), automatically finalizing utterance segment');
+          void this.stopListening();
         },
         onStateChange: (state) => {
           if (state === 'recording') {

@@ -4,7 +4,6 @@ import {
   Mic,
   X,
   Volume2,
-  Square,
   RotateCcw,
   Globe,
   Settings,
@@ -50,7 +49,7 @@ export const YuyanVoiceModal: React.FC = () => {
     switchEngineMode,
     startRecording,
     stopRecordingAndSend,
-    cancelRecording,
+    endSession,
     stopSpeaking,
     replayLastResponse,
   } = useVoiceConversation({
@@ -72,19 +71,19 @@ export const YuyanVoiceModal: React.FC = () => {
 
   const [copied, setCopied] = useState(false);
 
-  // Mobile background scroll lock & cleanup
+  // Auto-start listening on open, mobile background scroll lock & cleanup
   useEffect(() => {
     if (isVoiceModalOpen) {
       const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
+      // Automatically begin listening when user opens voice mode
+      void startRecording();
       return () => {
         document.body.style.overflow = originalOverflow;
-        cancelRecording();
-        stopSpeaking();
+        endSession();
       };
     } else {
-      cancelRecording();
-      stopSpeaking();
+      endSession();
     }
   }, [isVoiceModalOpen]);
 
@@ -103,7 +102,7 @@ export const YuyanVoiceModal: React.FC = () => {
     return 'Tự động nhận diện';
   };
 
-  const isRecording = state === 'recording';
+  const isListening = state === 'listening' || state === 'recording';
   const isSpeaking = state === 'speaking';
   const isGenerating = state === 'generating_response' || state === 'submitting_to_ai';
   const isTranscribing = state === 'transcribing';
@@ -119,26 +118,25 @@ export const YuyanVoiceModal: React.FC = () => {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-modal flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200 isolate"
+      className="fixed inset-0 z-modal flex items-end lg:items-center justify-center p-0 lg:p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200 isolate"
       role="dialog"
       aria-modal="true"
       aria-label="Hội thoại giọng nói Yuyan AI"
     >
       <div
-        className="relative w-full h-[100dvh] sm:h-[640px] sm:max-h-[92vh] sm:max-w-lg bg-surface text-text-primary sm:rounded-3xl rounded-none border-0 sm:border border-border-subtle shadow-2xl flex flex-col overflow-hidden isolate"
+        className="relative w-full h-[100dvh] lg:h-[640px] lg:max-h-[92vh] lg:max-w-lg md:max-w-xl bg-surface text-text-primary lg:rounded-3xl rounded-none border-0 lg:border border-border-subtle shadow-2xl flex flex-col overflow-hidden isolate"
         style={{ backgroundColor: 'var(--surface, #ffffff)' }}
       >
         {/* Tier 1: Fixed Top Header with Safe Area support */}
         <div className="flex-shrink-0 flex items-center justify-between px-3 sm:px-5 pt-[max(12px,env(safe-area-inset-top))] sm:pt-3.5 pb-2.5 border-b border-border-subtle/80 bg-surface-secondary/50 select-none">
           <div className="flex items-center gap-2 min-w-0">
-            {/* Mobile Back / Close Button */}
+            {/* Mobile & Tablet Back / Close Button */}
             <button
               onClick={() => {
-                cancelRecording();
-                stopSpeaking();
+                endSession();
                 closeVoiceModal();
               }}
-              className="sm:hidden p-1.5 -ml-1 rounded-xl text-text-muted hover:text-text-primary hover:bg-surface transition-colors active:scale-95 flex-shrink-0"
+              className="lg:hidden p-1.5 -ml-1 rounded-xl text-text-muted hover:text-text-primary hover:bg-surface transition-colors active:scale-95 flex-shrink-0 cursor-pointer"
               aria-label="Quay lại"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -157,7 +155,7 @@ export const YuyanVoiceModal: React.FC = () => {
                   }`}
                   title={
                     activeEngine === 'cloud'
-                      ? 'Đang dùng bộ ghi âm AI Gemini (Tương thích cao cho di động)'
+                      ? 'Đang dùng bộ ghi âm AI Gemini (Tương thích cao cho di động & máy tính bảng)'
                       : 'Đang dùng bộ nhận diện giọng nói Web Speech của trình duyệt'
                   }
                 >
@@ -168,10 +166,10 @@ export const YuyanVoiceModal: React.FC = () => {
               <p className="text-2xs font-medium flex items-center gap-1 mt-0.5">
                 <span
                   className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                    isRecording
-                      ? 'bg-rose-500 animate-ping'
+                    isListening
+                      ? 'bg-primary animate-ping'
                       : isSpeaking
-                      ? 'bg-primary animate-pulse'
+                      ? 'bg-amber-500 animate-pulse'
                       : isGenerating || isTranscribing
                       ? 'bg-amber-500 animate-bounce'
                       : 'bg-status-success'
@@ -179,16 +177,16 @@ export const YuyanVoiceModal: React.FC = () => {
                 />
                 <span
                   className={`truncate ${
-                    isRecording
-                      ? 'text-rose-500 font-bold'
-                      : isSpeaking
+                    isListening
                       ? 'text-primary font-bold'
+                      : isSpeaking
+                      ? 'text-amber-500 font-bold'
                       : isGenerating || isTranscribing
                       ? 'text-amber-500 font-bold'
                       : 'text-status-success'
                   }`}
                 >
-                  {isRecording
+                  {isListening
                     ? 'Đang nghe...'
                     : isTranscribing
                     ? 'Đang nhận diện...'
@@ -228,11 +226,10 @@ export const YuyanVoiceModal: React.FC = () => {
             {/* Desktop Close Modal */}
             <button
               onClick={() => {
-                cancelRecording();
-                stopSpeaking();
+                endSession();
                 closeVoiceModal();
               }}
-              className="hidden sm:inline-flex p-1.5 rounded-full text-text-muted hover:text-text-primary hover:bg-surface transition-colors cursor-pointer"
+              className="hidden lg:inline-flex p-1.5 rounded-full text-text-muted hover:text-text-primary hover:bg-surface transition-colors cursor-pointer"
               title="Đóng cửa sổ"
               aria-label="Đóng cửa sổ"
             >
@@ -244,8 +241,8 @@ export const YuyanVoiceModal: React.FC = () => {
         {/* Tier 2: Dedicated Audio Visualizer & Waveform Bar (Fixed Height, Non-scrollable) */}
         <div className="flex-shrink-0 px-3.5 sm:px-6 py-2 bg-surface-secondary/30 border-b border-border-subtle flex flex-col items-center justify-center">
           <YuyanAudioVisualizer
-            isActive={isRecording || isSpeaking}
-            volumePercent={isRecording ? volume : isSpeaking ? 65 : 0}
+            isActive={isListening || isSpeaking}
+            volumePercent={isListening ? volume : isSpeaking ? 65 : 0}
             barCount={capabilities.isIOS || capabilities.isAndroid ? 24 : 32}
             className="h-10 sm:h-12"
           />
@@ -258,32 +255,29 @@ export const YuyanVoiceModal: React.FC = () => {
               <span className="truncate">{getLanguageLabel()}</span>
               <span className="shrink-0">▾</span>
             </button>
-            <span className="text-3xs uppercase tracking-wider font-semibold text-primary shrink-0">
-              {settings.readingMode === 'chinese_only'
-                ? 'Chỉ tiếng Trung'
-                : settings.readingMode === 'vietnamese_only'
-                ? 'Chỉ tiếng Việt'
-                : 'Song ngữ'}
-            </span>
+            <div className="flex items-center gap-2 shrink-0">
+              {!capabilities.hasChineseVoice && (
+                <button
+                  onClick={openSettingsModal}
+                  className="text-3xs text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+                  title="Chưa tìm thấy giọng đọc tiếng Trung trên thiết bị. Bấm để mở cài đặt âm thanh."
+                >
+                  <span>Chưa có giọng Trung</span>
+                </button>
+              )}
+              <span className="text-3xs uppercase tracking-wider font-semibold text-primary">
+                {settings.readingMode === 'chinese_only'
+                  ? 'Chỉ tiếng Trung'
+                  : settings.readingMode === 'vietnamese_only'
+                  ? 'Chỉ tiếng Việt'
+                  : 'Song ngữ'}
+              </span>
+            </div>
           </div>
         </div>
 
         {/* Tier 3: Independent Scrollable Conversation Feed (Never overlaps visualizer or buttons) */}
         <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3.5 bg-surface custom-scrollbar">
-          {/* Missing Voice Notice if device lacks voices */}
-          {!capabilities.hasChineseVoice && (
-            <div className="p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-2xs flex items-center justify-between gap-2">
-              <span className="leading-snug">
-                💡 Thiết bị chưa cài giọng đọc tiếng Trung trong hệ thống. Bạn có thể bật thêm giọng đọc trong Cài đặt hoặc đọc bằng chữ.
-              </span>
-              <button
-                onClick={openSettingsModal}
-                className="underline font-bold shrink-0 text-primary"
-              >
-                Cài đặt
-              </button>
-            </div>
-          )}
 
           {/* Error Banner */}
           {error && (
@@ -394,11 +388,11 @@ export const YuyanVoiceModal: React.FC = () => {
                 </button>
               </div>
             </div>
-          ) : isRecording ? (
+          ) : isListening ? (
             <div className="py-8 text-center space-y-1.5 text-text-muted animate-in fade-in duration-150">
               <p className="text-sm font-semibold text-text-primary">Yuyan AI đang chăm chú lắng nghe...</p>
               <p className="text-xs text-text-muted">Em hãy nói bằng tiếng Trung hoặc tiếng Việt tự nhiên nhé.</p>
-              <p className="text-2xs text-text-muted opacity-75">Nói xong, nhấn vào nút dừng để gửi câu hỏi.</p>
+              <p className="text-2xs text-primary font-medium">Tự động nhận diện khi bạn dừng nói.</p>
             </div>
           ) : isTranscribing ? (
             <div className="py-8 text-center space-y-2 text-primary animate-in fade-in duration-150">
@@ -417,7 +411,7 @@ export const YuyanVoiceModal: React.FC = () => {
               </div>
               <p className="text-sm font-bold text-text-primary">Luyện nói tiếng Trung tự nhiên</p>
               <p className="text-xs max-w-xs mx-auto text-text-muted">
-                Nhấn vào nút Micro lớn bên dưới để bắt đầu nói. AI sẽ nhận diện giọng nói và đàm thoại song ngữ cùng bạn.
+                Nói tiếng Trung hoặc tiếng Việt tự nhiên. AI sẽ tự động lắng nghe và đàm thoại liên tục cùng bạn.
               </p>
             </div>
           )}
@@ -425,26 +419,25 @@ export const YuyanVoiceModal: React.FC = () => {
 
         {/* Tier 4: Fixed Bottom Control Bar with Mobile Safe Area Insets */}
         <div className="flex-shrink-0 px-6 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] border-t border-border-subtle bg-surface-secondary/70 flex items-center justify-between select-none">
-          {/* Cancel button */}
+          {/* Explicit End Session Button */}
           <button
             onClick={() => {
-              cancelRecording();
-              stopSpeaking();
+              endSession();
               closeVoiceModal();
             }}
-            className="text-xs font-bold text-text-muted hover:text-text-primary px-3 py-2.5 rounded-xl transition-colors min-h-[44px] flex items-center cursor-pointer"
+            className="text-xs font-bold text-text-muted hover:text-text-primary px-3 py-2.5 rounded-xl transition-colors min-h-[48px] flex items-center cursor-pointer"
           >
             Đóng
           </button>
 
           {/* Central Action Microphone Button (Touch Target >= 64px) */}
           <div className="relative">
-            {isRecording && (
-              <span className="absolute -inset-1.5 rounded-full bg-rose-500/25 animate-ping pointer-events-none" />
+            {isListening && (
+              <span className="absolute -inset-2 rounded-full bg-primary/25 animate-ping pointer-events-none" />
             )}
             <button
               onClick={() => {
-                if (isRecording) {
+                if (isListening) {
                   void stopRecordingAndSend();
                 } else if (isSpeaking) {
                   stopSpeaking();
@@ -452,24 +445,22 @@ export const YuyanVoiceModal: React.FC = () => {
                   void startRecording();
                 }
               }}
-              className={`relative w-16 h-16 rounded-full flex items-center justify-center text-white shadow-xl transition-all transform active:scale-90 cursor-pointer ${
-                isRecording
-                  ? 'bg-rose-500 hover:bg-rose-600 ring-4 ring-rose-500/30'
+              className={`relative w-16 h-16 rounded-full flex items-center justify-center text-white shadow-xl transition-all transform active:scale-95 cursor-pointer ${
+                isListening
+                  ? 'bg-primary ring-4 ring-primary/30 shadow-primary/30'
                   : isSpeaking
                   ? 'bg-amber-500 hover:bg-amber-600 ring-4 ring-amber-500/30'
                   : isGenerating || isTranscribing
                   ? 'bg-slate-400 cursor-wait'
                   : 'bg-primary hover:bg-primary-hover ring-4 ring-primary/20'
               }`}
-              title={isRecording ? 'Dừng và gửi' : isSpeaking ? 'Dừng phát âm' : 'Bắt đầu nói'}
-              aria-label={isRecording ? 'Dừng thu âm và gửi' : isSpeaking ? 'Dừng phát âm' : 'Bắt đầu thu âm'}
+              title={isListening ? 'Đang nghe (Nhấn để gửi ngay)' : isSpeaking ? 'Dừng phát âm' : 'Bắt đầu nói'}
+              aria-label={isListening ? 'Đang nghe tự động' : isSpeaking ? 'Dừng phát âm' : 'Bắt đầu thu âm'}
             >
-              {isRecording ? (
-                <Square className="w-5 h-5 fill-current" />
-              ) : isSpeaking ? (
-                <Square className="w-5 h-5 fill-current" />
-              ) : isGenerating || isTranscribing ? (
+              {isGenerating || isTranscribing ? (
                 <Loader2 className="w-6 h-6 animate-spin" />
+              ) : isSpeaking ? (
+                <Volume2 className="w-6 h-6 animate-pulse" />
               ) : (
                 <Mic className="w-7 h-7" />
               )}
@@ -480,7 +471,7 @@ export const YuyanVoiceModal: React.FC = () => {
           {lastAiResponse ? (
             <button
               onClick={() => replayLastResponse()}
-              className="text-xs font-bold text-primary hover:text-primary-hover px-3 py-2.5 rounded-xl flex items-center gap-1 transition-colors min-h-[44px] cursor-pointer"
+              className="text-xs font-bold text-primary hover:text-primary-hover px-3 py-2.5 rounded-xl flex items-center gap-1 transition-colors min-h-[48px] cursor-pointer"
               title="Phát lại phản hồi"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -489,7 +480,7 @@ export const YuyanVoiceModal: React.FC = () => {
           ) : (
             <button
               onClick={openLanguageModal}
-              className="text-xs font-bold text-text-secondary hover:text-text-primary px-3 py-2.5 rounded-xl transition-colors min-h-[44px] flex items-center cursor-pointer"
+              className="text-xs font-bold text-text-secondary hover:text-text-primary px-3 py-2.5 rounded-xl transition-colors min-h-[48px] flex items-center cursor-pointer"
             >
               {settings.sttLanguage === 'zh-CN' ? 'ZH ↔ VI' : 'VI ↔ ZH'}
             </button>

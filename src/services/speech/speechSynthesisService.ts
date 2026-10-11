@@ -446,6 +446,13 @@ export class SpeechSynthesisService {
     const voice = this.findVoice(seg.lang, preferredVoiceUri);
     if (voice) {
       utterance.voice = voice;
+    } else if (seg.isChinese) {
+      // Device lacks an installed Chinese voice.
+      // Do not allow an inappropriate default voice (e.g. English) to mispronounce Chinese characters.
+      console.warn(`[YUYAN-TTS] Skipping Chinese segment "${seg.text}" because no Mandarin voice is installed on device.`);
+      this.activeQueueIndex++;
+      this.playNextSegmentInQueue(sessionId);
+      return;
     }
 
     utterance.onstart = () => {
