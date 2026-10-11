@@ -61,6 +61,14 @@ interface YuyanAIContextValue {
   closeLanguageModal: () => void;
   updateVoiceSettings: (newSettings: Partial<VoiceSettings>) => void;
   sendMessage: (text: string, attachment?: AiChatAttachment | null) => Promise<void>;
+  appendMessage: (msg: {
+    sender: 'ai' | 'user';
+    text: string;
+    pinyin?: string;
+    vietnamese?: string;
+    feedback?: string | null;
+    followUp?: string;
+  }) => void;
   clearMessages: () => void;
   isLoading: boolean;
 }
@@ -287,6 +295,32 @@ export const YuyanAIProvider: React.FC<{ children: React.ReactNode }> = ({ child
     ]);
   }, [alwaysShowPinyin, alwaysShowTranslation]);
 
+  const appendMessage = useCallback(
+    (msg: {
+      sender: 'ai' | 'user';
+      text: string;
+      pinyin?: string;
+      vietnamese?: string;
+      feedback?: string | null;
+      followUp?: string;
+    }) => {
+      const newMsg: ChatMessage = {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        sender: msg.sender,
+        text: msg.text,
+        pinyin: msg.pinyin,
+        vietnamese: msg.vietnamese,
+        feedback: msg.feedback,
+        followUp: msg.followUp,
+        isPinyinVisible: alwaysShowPinyin,
+        isTranslationVisible: alwaysShowTranslation,
+        timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+      };
+      setMessages((prev) => [...prev, newMsg]);
+    },
+    [alwaysShowPinyin, alwaysShowTranslation]
+  );
+
   const sendMessageInternal = async (text: string, attachment?: AiChatAttachment | null) => {
     if ((!text.trim() && !attachment) || isLoading) return;
 
@@ -442,6 +476,7 @@ export const YuyanAIProvider: React.FC<{ children: React.ReactNode }> = ({ child
         closeLanguageModal,
         updateVoiceSettings,
         sendMessage,
+        appendMessage,
         clearMessages,
         isLoading,
       }}

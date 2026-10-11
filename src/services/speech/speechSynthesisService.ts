@@ -3,6 +3,7 @@
  * High-quality bilingual speech engine supporting Mandarin Chinese (Voice A)
  * and Vietnamese (Voice B) with language-aware text segmentation,
  * sequential non-overlapping queue, configurable reading modes,
+ * mobile autoplay gesture unlock, iOS Safari resume keep-alive,
  * and immediate cancellation.
  */
 
@@ -17,6 +18,7 @@ export interface BilingualSpeechOptions {
   onStart?: () => void;
   onEnd?: () => void;
   onError?: (err: VoiceError) => void;
+  onVoiceMissing?: (missingLang: 'zh-CN' | 'vi-VN') => void;
   onSegmentChange?: (segment: SpeechSegment, index: number, total: number) => void;
 }
 
@@ -30,6 +32,7 @@ export class SpeechSynthesisService {
   private activeQueueIndex: number = -1;
   private activeOptions: BilingualSpeechOptions | null = null;
   private activeSessionId: number = 0;
+  private iosResumeInterval: number | null = null;
 
   public static getInstance(): SpeechSynthesisService {
     if (!SpeechSynthesisService.instance) {
@@ -71,6 +74,83 @@ export class SpeechSynthesisService {
 
   public areVoicesLoaded(): boolean {
     return this.voicesLoaded;
+  }
+
+  /**
+   * Mobile Web Audio & SpeechSynthesis Pre-Unlock
+   * MUST be invoked directly within an explicit user touch/click event handler.
+   * This unblocks the iOS Safari and Android Chrome asynchronous autoplay restrictions.
+   */
+  public unlockAudioOnUserGesture(): void {
+    if (typeof window === 'undefined') return;
+
+    // 1. Unlock SpeechSynthesis on iOS / Android
+    if (window.speechSynthesis) {
+      try {
+        window.speechSynthesis.resume();
+        // Speak a 1-character silent micro-utterance to prime the engine
+        const micro = new SpeechSynthesisUtterance(' ');
+        micro.volume = 0.01;
+        micro.rate = 10;
+        window.speechSynthesis.speak(micro);
+      } catch {
+        // Safe ignore
+      }
+    }
+
+    // 2. Unlock Web AudioContext if instantiated
+    const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioCtxClass) {
+      try {
+        const dummyCtx = new AudioCtxClass();
+        if (dummyCtx.state === 'suspended') {
+          dummyCtx.resume().catch(() => {});
+        }
+        setTimeout(() => {
+          if (dummyCtx.state !== 'closed') {
+            dummyCtx.close().catch(() => {});
+          }
+        }, 100);
+      } catch {
+        // Safe ignore
+      }
+    }
+  }
+
+  /**
+   * Check if device has Mandarin Chinese voice installed
+   */
+  public hasChineseVoice(): boolean {
+    if (!this.isSupported()) return false;
+    const all = window.speechSynthesis.getVoices();
+    return all.some((v) => {
+      const l = (v.lang || '').toLowerCase();
+      const n = (v.name || '').toLowerCase();
+      return (
+        l.startsWith('zh') ||
+        n.includes('chinese') ||
+        n.includes('mandarin') ||
+        v.name.includes('普通话') ||
+        v.name.includes('中文')
+      );
+    });
+  }
+
+  /**
+   * Check if device has Vietnamese voice installed
+   */
+  public hasVietnameseVoice(): boolean {
+    if (!this.isSupported()) return false;
+    const all = window.speechSynthesis.getVoices();
+    return all.some((v) => {
+      const l = (v.lang || '').toLowerCase();
+      const n = (v.name || '').toLowerCase();
+      return (
+        l.startsWith('vi') ||
+        n.includes('vietnam') ||
+        n.includes('tiếng việt')
+      );
+    });
   }
 
   /**
@@ -139,7 +219,7 @@ export class SpeechSynthesisService {
       .replace(/^\s*[-*+]\s+/gm, '')
       .replace(/^\s*\d+\.\s+/gm, '')
       // Remove emoji/symbol decorators
-      .replace(/[💡👉⭐✨🎉👍]/g, '')
+      .replace(/[💡👉⭐✨🎉👍😄👋☕🍵🛍️✈️]/g, '')
       // Clean up multiple whitespaces
       .replace(/\s+/g, ' ')
       .trim();
@@ -199,8 +279,7 @@ export class SpeechSynthesisService {
         return;
       }
 
-      // Case 3: Mixed clause with inline Hanzi and Latin text (e.g. "Từ 好啦 có nghĩa là được rồi")
-      // Match CJK characters and Chinese punctuation together
+      // Case 3: Mixed clause with inline Hanzi and Latin text
       const mixedTokens = clause
         .split(/([\u4e00-\u9fa5\u3000-\u303f\uff01-\uff0f\uff1a-\uff20]+)/)
         .filter((t) => t.trim().length > 0);
@@ -240,7 +319,7 @@ export class SpeechSynthesisService {
   }
 
   /**
-   * Find matching voice for target language
+   * Find matching voice for target language with robust fallback
    */
   public findVoice(lang: 'zh-CN' | 'vi-VN', preferredUri?: string): SpeechSynthesisVoice | null {
     if (typeof window === 'undefined' || !window.speechSynthesis) return null;
@@ -260,7 +339,7 @@ export class SpeechSynthesisService {
       });
       if (zhCn) return zhCn;
 
-      // 2. Any Chinese voice
+      // 2. Any Chinese voice (Taiwan, Hong Kong, general)
       const anyZh = all.find((v) => {
         const l = (v.lang || '').toLowerCase();
         const n = (v.name || '').toLowerCase();
@@ -293,8 +372,6 @@ export class SpeechSynthesisService {
 
   /**
    * Speak segmented text with language-aware sequential playback.
-   * Chinese segments are spoken by Mandarin Voice A.
-   * Vietnamese segments are spoken by Vietnamese Voice B.
    */
   public async speakBilingual(options: BilingualSpeechOptions): Promise<void> {
     if (!this.isSupported()) {
@@ -320,7 +397,19 @@ export class SpeechSynthesisService {
     this.activeQueueIndex = 0;
     this.activeOptions = options;
 
+    // Check voice availability and notify if device is missing language voice
+    if (segments.some((s) => s.isChinese) && !this.hasChineseVoice()) {
+      options.onVoiceMissing?.('zh-CN');
+    }
+    if (segments.some((s) => !s.isChinese) && !this.hasVietnameseVoice()) {
+      options.onVoiceMissing?.('vi-VN');
+    }
+
     options.onStart?.();
+
+    // Start iOS keep-alive timer to prevent Safari from pausing speech after 15s
+    this.startIosKeepAlive();
+
     this.playNextSegmentInQueue(currentSession);
   }
 
@@ -335,6 +424,7 @@ export class SpeechSynthesisService {
       this.isSpeaking = false;
       this.currentUtterance = null;
       this.queue = [];
+      this.stopIosKeepAlive();
       this.activeOptions?.onEnd?.();
       return;
     }
@@ -382,31 +472,38 @@ export class SpeechSynthesisService {
     };
 
     this.currentUtterance = utterance;
+
+    // Call resume() before speaking to fix iOS Safari paused bug
+    try {
+      window.speechSynthesis.resume();
+    } catch {
+      // ignore
+    }
+
     window.speechSynthesis.speak(utterance);
   }
 
-  /**
-   * Legacy single-turn speak method (backward compatible)
-   */
-  public async speak(options: {
-    text: string;
-    lang?: 'zh-CN' | 'vi-VN';
-    rate?: number;
-    voiceURI?: string;
-    onStart?: () => void;
-    onEnd?: () => void;
-    onError?: (err: VoiceError) => void;
-  }): Promise<void> {
-    return this.speakBilingual({
-      text: options.text,
-      rate: options.rate,
-      chineseVoiceUri: options.lang === 'zh-CN' ? options.voiceURI : undefined,
-      vietnameseVoiceUri: options.lang === 'vi-VN' ? options.voiceURI : undefined,
-      readingMode: options.lang === 'zh-CN' ? 'chinese_only' : options.lang === 'vi-VN' ? 'vietnamese_only' : 'all',
-      onStart: options.onStart,
-      onEnd: options.onEnd,
-      onError: options.onError,
-    });
+  private startIosKeepAlive(): void {
+    this.stopIosKeepAlive();
+    // Periodically call resume() to keep mobile speech synthesis running
+    this.iosResumeInterval = window.setInterval(() => {
+      if (this.isSpeaking && typeof window !== 'undefined' && window.speechSynthesis) {
+        try {
+          if (window.speechSynthesis.paused) {
+            window.speechSynthesis.resume();
+          }
+        } catch {
+          // ignore
+        }
+      }
+    }, 5000);
+  }
+
+  private stopIosKeepAlive(): void {
+    if (this.iosResumeInterval) {
+      clearInterval(this.iosResumeInterval);
+      this.iosResumeInterval = null;
+    }
   }
 
   /**
@@ -419,6 +516,7 @@ export class SpeechSynthesisService {
     this.activeOptions = null;
     this.isSpeaking = false;
     this.currentUtterance = null;
+    this.stopIosKeepAlive();
 
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       try {

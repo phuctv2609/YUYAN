@@ -1,8 +1,9 @@
 /**
  * YUYAN — React Hook for Real-Time AI Voice Conversation
- * Manages full voice state machine:
+ * Mobile-compatible, robust voice conversation state machine:
  * idle → requesting_permission → recording → transcribing → generating_response → speaking → ready
- * Coordinates Speech Recognition (STT), Gemini AI Chat API, and Speech Synthesis (TTS).
+ * Coordinates Dual-Engine Speech Recognition (Native / Gemini Cloud STT),
+ * Gemini AI Chat API, and Mobile-Unlocked Speech Synthesis (TTS).
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -12,6 +13,8 @@ import {
   DEFAULT_VOICE_SETTINGS,
   VoiceError,
   STTRecognitionResult,
+  MobileVoiceCapabilities,
+  STTEngineMode,
 } from './speechTypes';
 import { speechRecognitionService } from './speechRecognitionService';
 import { speechSynthesisService } from './speechSynthesisService';
@@ -21,7 +24,16 @@ const SETTINGS_STORAGE_KEY = 'yuyan_voice_settings_v1';
 
 export function useVoiceConversation(options?: {
   scenario?: string;
-  onNewMessage?: (msg: { sender: 'user' | 'ai'; text: string }) => void;
+  conversationMode?: 'free_chat' | 'roleplay' | 'speaking' | 'correction' | 'hsk';
+  hskLevel?: number;
+  onNewMessage?: (msg: {
+    sender: 'user' | 'ai';
+    text: string;
+    pinyin?: string;
+    vietnamese?: string;
+    feedback?: string | null;
+    followUp?: string;
+  }) => void;
 }) {
   // Voice Settings with LocalStorage persistence
   const [settings, setSettings] = useState<VoiceSettings>(() => {
@@ -55,7 +67,15 @@ export function useVoiceConversation(options?: {
   const [transcript, setTranscript] = useState<string>('');
   const [interimTranscript, setInterimTranscript] = useState<string>('');
   const [lastAiResponse, setLastAiResponse] = useState<string>('');
+  const [lastAiPinyin, setLastAiPinyin] = useState<string>('');
+  const [lastAiVietnamese, setLastAiVietnamese] = useState<string>('');
   const [error, setError] = useState<VoiceError | null>(null);
+  const [capabilities, setCapabilities] = useState<MobileVoiceCapabilities>(() =>
+    speechRecognitionService.getCapabilities()
+  );
+  const [activeEngine, setActiveEngine] = useState<'native' | 'cloud'>(() =>
+    speechRecognitionService.getActiveEngine()
+  );
 
   const durationTimerRef = useRef<number | null>(null);
   const activeTranscriptRef = useRef<string>('');
@@ -65,9 +85,33 @@ export function useVoiceConversation(options?: {
   const settingsRef = useRef<VoiceSettings>(settings);
   settingsRef.current = settings;
 
-  // Cleanup on unmount
+  // Refresh capabilities on mount
   useEffect(() => {
+    setCapabilities(speechRecognitionService.getCapabilities());
+  }, []);
+
+  // Mobile Page Lifecycle: suspend on background/app switch to prevent stuck audio tracks
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (stateRef.current === 'recording') {
+          cancelRecording();
+        }
+        speechSynthesisService.stop();
+      }
+    };
+
+    const handlePageHide = () => {
+      speechRecognitionService.abortListening();
+      speechSynthesisService.stop();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
       if (durationTimerRef.current) {
         window.clearInterval(durationTimerRef.current);
       }
@@ -78,9 +122,13 @@ export function useVoiceConversation(options?: {
 
   /**
    * Start Speech Recording (Microphone Push-to-Talk)
+   * Must be called from user touch/click to unlock mobile audio
    */
   const startRecording = useCallback(async () => {
-    // If AI is currently speaking, stop TTS first so microphone doesn't capture it
+    // 1. Mobile user gesture audio unlock
+    speechSynthesisService.unlockAudioOnUserGesture();
+
+    // 2. Stop any existing playback
     speechSynthesisService.stop();
 
     setError(null);
@@ -93,9 +141,11 @@ export function useVoiceConversation(options?: {
     try {
       await speechRecognitionService.startListening({
         lang: settingsRef.current.sttLanguage,
+        engineMode: settingsRef.current.sttEngineMode || 'auto',
         continuous: false,
         onStart: () => {
           setState('recording');
+          setActiveEngine(speechRecognitionService.getActiveEngine());
           // Start timer
           if (durationTimerRef.current) window.clearInterval(durationTimerRef.current);
           durationTimerRef.current = window.setInterval(() => {
@@ -111,6 +161,9 @@ export function useVoiceConversation(options?: {
             setTranscript(res.transcript);
           }
           setInterimTranscript(res.interimTranscript);
+          if (res.engine) {
+            setActiveEngine(res.engine);
+          }
         },
         onError: (err) => {
           console.warn('Voice recording error:', err);
@@ -118,8 +171,14 @@ export function useVoiceConversation(options?: {
             window.clearInterval(durationTimerRef.current);
             durationTimerRef.current = null;
           }
-          setError(err);
-          setState('error');
+          if (err.code === 'NO_SPEECH') {
+            // Gentle reset rather than scary failure
+            setError(err);
+            setState('ready');
+          } else {
+            setError(err);
+            setState('error');
+          }
         },
         onEnd: () => {
           if (durationTimerRef.current) {
@@ -152,12 +211,13 @@ export function useVoiceConversation(options?: {
   /**
    * Stop Recording explicitly and submit recognized speech
    */
-  const stopRecordingAndSend = useCallback(() => {
+  const stopRecordingAndSend = useCallback(async () => {
     if (durationTimerRef.current) {
       window.clearInterval(durationTimerRef.current);
       durationTimerRef.current = null;
     }
-    speechRecognitionService.stopListening();
+    setState('transcribing');
+    await speechRecognitionService.stopListening();
   }, []);
 
   /**
@@ -192,20 +252,38 @@ export function useVoiceConversation(options?: {
 
       try {
         let aiReplyText = '';
-        if (options?.scenario) {
-          const res = await aiApiService.sendChatMessage({
-            scenario: options.scenario,
-            message: text,
-          });
-          aiReplyText = res.hanzi;
-        } else {
-          aiReplyText = await aiApiService.sendFreeChatMessage({
-            question: text,
-          });
-        }
+        let aiPinyin = '';
+        let aiVietnamese = '';
+        let feedback: string | null = null;
+        let followUp: string | undefined = undefined;
+
+        // Use natural chat endpoint by default
+        const chatRes = await aiApiService.sendChatMessage({
+          scenario: options?.scenario || 'Hội thoại tự do hàng ngày',
+          message: text,
+          conversationMode: options?.conversationMode || 'free_chat',
+          hskLevel: options?.hskLevel || 2,
+        });
+
+        aiReplyText = chatRes.hanzi;
+        aiPinyin = chatRes.pinyin;
+        aiVietnamese = chatRes.vietnamese;
+        feedback = chatRes.feedback || null;
+        followUp = chatRes.followUp;
 
         setLastAiResponse(aiReplyText);
-        options?.onNewMessage?.({ sender: 'ai', text: aiReplyText });
+        setLastAiPinyin(aiPinyin);
+        setLastAiVietnamese(aiVietnamese);
+
+        // Notify parent with full metadata
+        options?.onNewMessage?.({
+          sender: 'ai',
+          text: aiReplyText,
+          pinyin: aiPinyin,
+          vietnamese: aiVietnamese,
+          feedback,
+          followUp,
+        });
 
         // Speak AI Response
         if (settingsRef.current.ttsEnabled && aiReplyText) {
@@ -263,6 +341,7 @@ export function useVoiceConversation(options?: {
   const replayLastResponse = useCallback(
     async (customMode?: import('./speechTypes').ReadingMode) => {
       if (!lastAiResponse) return;
+      speechSynthesisService.unlockAudioOnUserGesture();
       setState('speaking');
       await speechSynthesisService.speakBilingual({
         text: lastAiResponse,
@@ -278,6 +357,10 @@ export function useVoiceConversation(options?: {
     [lastAiResponse, settings.speechRate, settings.chineseVoiceUri, settings.vietnameseVoiceUri, settings.readingMode]
   );
 
+  const switchEngineMode = useCallback((mode: STTEngineMode) => {
+    updateSettings({ sttEngineMode: mode });
+  }, [updateSettings]);
+
   return {
     state,
     volume,
@@ -285,8 +368,13 @@ export function useVoiceConversation(options?: {
     transcript,
     interimTranscript,
     lastAiResponse,
+    lastAiPinyin,
+    lastAiVietnamese,
     error,
     settings,
+    capabilities,
+    activeEngine,
+    switchEngineMode,
     updateSettings,
     startRecording,
     stopRecordingAndSend,

@@ -38,8 +38,23 @@ export interface VoiceSettings {
   readingMode: ReadingMode;
   preferredResponseLanguage: 'auto' | 'zh' | 'vi' | 'en';
   sttLanguage: SpeechRecognitionLanguage;
+  sttEngineMode?: STTEngineMode;
   chineseVoiceUri?: string;
   vietnameseVoiceUri?: string;
+}
+
+export type STTEngineMode = 'auto' | 'native' | 'cloud';
+
+export interface MobileVoiceCapabilities {
+  hasNativeSTT: boolean;
+  hasMediaRecorder: boolean;
+  hasSpeechSynthesis: boolean;
+  hasChineseVoice: boolean;
+  hasVietnameseVoice: boolean;
+  isSecureContext: boolean;
+  isIOS: boolean;
+  isAndroid: boolean;
+  preferredEngine: 'native' | 'cloud';
 }
 
 export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
@@ -52,6 +67,7 @@ export const DEFAULT_VOICE_SETTINGS: VoiceSettings = {
   readingMode: 'all',
   preferredResponseLanguage: 'auto',
   sttLanguage: 'zh-CN',
+  sttEngineMode: 'auto',
 };
 
 export interface STTRecognitionResult {
@@ -59,6 +75,7 @@ export interface STTRecognitionResult {
   interimTranscript: string;
   isFinal: boolean;
   confidence: number;
+  engine?: 'native' | 'cloud';
 }
 
 export interface VoiceError {

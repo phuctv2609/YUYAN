@@ -520,6 +520,36 @@ class AiApiService {
 
     return data.result;
   }
+
+  /**
+   * Multimodal Audio Speech-to-Text (STT) for Mobile & Cross-Browser Recognition
+   */
+  async transcribeAudio(params: {
+    audioBase64: string;
+    audioMimeType?: string;
+    languageHint?: 'zh-CN' | 'vi-VN' | 'auto';
+  }): Promise<{
+    transcript: string;
+    pinyin?: string;
+    detectedLanguage?: string;
+    confidence?: number;
+    isEmpty?: boolean;
+  }> {
+    const data = await this.invokeEdgeFunction({
+      action: 'speech-to-text',
+      audioBase64: params.audioBase64,
+      audioMimeType: params.audioMimeType || 'audio/webm',
+      languageHint: params.languageHint || 'auto',
+    });
+
+    if (!data?.success && data?.error) {
+      const err = new Error(data.message || 'Lỗi khi nhận diện giọng nói từ máy chủ');
+      (err as any).code = data.error;
+      throw err;
+    }
+
+    return data.result || { transcript: '', isEmpty: true };
+  }
 }
 
 export const aiApiService = new AiApiService();

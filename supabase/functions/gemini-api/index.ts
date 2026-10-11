@@ -472,6 +472,82 @@ Hãy trả lời học viên bằng tiếng Việt sư phạm, chu đáo, giải
       );
     }
 
+    // 4.5. SPEECH-TO-TEXT (MULTIMODAL AUDIO TRANSCRIPTION FOR MOBILE & CROSS-PLATFORM)
+    if (action === 'speech-to-text') {
+      const audioBase64 = body.audioBase64 || body.audioData || null;
+      const audioMimeType = body.audioMimeType || 'audio/webm';
+      const languageHint = body.languageHint || body.lang || 'auto'; // 'zh-CN', 'vi-VN', or 'auto'
+
+      if (!audioBase64) {
+        return new Response(
+          JSON.stringify({ error: 'INVALID_INPUT', message: 'Thiếu dữ liệu âm thanh (audioBase64)' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+
+      const promptText = `Bạn là Chuyên gia Xử lý Âm thanh và Nhận diện Giọng nói (Speech Recognition Specialist) cho ứng dụng học tiếng Trung YUYAN.
+Nhiệm vụ: Chuyển đổi chính xác lời nói trong đoạn ghi âm thành văn bản (Speech-to-Text).
+Người nói là học viên tiếng Trung hoặc giáo viên, nói bằng tiếng Trung (Mandarin) hoặc tiếng Việt.
+${languageHint === 'zh-CN' ? 'Ưu tiên nhận diện bằng tiếng Trung (giản thể).' : languageHint === 'vi-VN' ? 'Ưu tiên nhận diện bằng tiếng Việt.' : 'Tự động nhận diện tiếng Trung hoặc tiếng Việt tùy theo lời nói thực tế.'}
+
+QUY TẮC:
+1. Nếu là tiếng Trung: Trả về chữ Hán giản thể chuẩn xác. Cung cấp thêm Pinyin nếu nhận diện được.
+2. Nếu là tiếng Việt: Trả về văn bản tiếng Việt có dấu đúng chính tả.
+3. Nếu âm thanh quá nhỏ, im lặng hoặc chỉ có tiếng ồn: Trả về "transcript": "" và "isEmpty": true.
+
+YÊU CẦU ĐẦU RA (JSON DUY NHẤT, KHÔNG CÓ MARKDOWN HOẶC TEXT KHÁC):
+{
+  "transcript": "<Văn bản đã nhận diện>",
+  "pinyin": "<Pinyin tương ứng nếu là tiếng Trung, nếu là tiếng Việt thì để rỗng>",
+  "detectedLanguage": "<'zh-CN' | 'vi-VN' | 'other'>",
+  "confidence": 0.95,
+  "isEmpty": false
+}`;
+
+      const geminiParts = [
+        { text: promptText },
+        {
+          inlineData: {
+            mimeType: audioMimeType,
+            data: audioBase64,
+          },
+        },
+      ];
+
+      const geminiRes = await callGemini(geminiKey, geminiParts, true);
+      if (!geminiRes.success) {
+        return new Response(
+          JSON.stringify({
+            error: 'GEMINI_ERROR',
+            message: geminiRes.message,
+            status: geminiRes.status,
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 502 }
+        );
+      }
+
+      let parsedResult: any;
+      try {
+        parsedResult = JSON.parse(geminiRes.text!);
+      } catch {
+        parsedResult = {
+          transcript: geminiRes.text || '',
+          pinyin: '',
+          detectedLanguage: 'auto',
+          confidence: 0.85,
+          isEmpty: !geminiRes.text?.trim(),
+        };
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          result: parsedResult,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
     // 5. PRONUNCIATION EVALUATION (MULTIMODAL / COMPARATIVE PHONETICS)
     if (action === 'evaluate-pronunciation') {
       const targetHanzi = (body.targetHanzi || body.hanzi || '').trim();
